@@ -1,6 +1,6 @@
 #include "common.h"
 #include "controller.h"
-#include "game.h"
+#include "player.h"
 #include "log.h"
 
 

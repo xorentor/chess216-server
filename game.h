@@ -1,6 +1,7 @@
-#ifndef __GAME_H_
-#define __GAME_H_
+#include "game.h"
 
-void *Parse( void *data );
+void GLogin( const char *data )
+{
 
-#endif
+}
+
