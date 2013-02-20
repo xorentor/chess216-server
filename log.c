@@ -12,13 +12,13 @@ INLINE void LogMessage( const int severity, const char *msg )
 	switch( severity )
 	{
 		case LOG_NOTICE:
-			printf( "Notice %s", buf );	
+			printf( "Notice: %s", buf );	
 			break;
 		case LOG_WARNING:
-			printf( "Warning %s", buf );	
+			printf( "Warning: %s", buf );	
 			break;
 		case LOG_ERROR:
-			printf( "Error %s", buf );	
+			printf( "Error: %s", buf );	
 			break;
 	}	
 }

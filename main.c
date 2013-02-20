@@ -3,7 +3,7 @@
 
 int main( int argc, char *argv[] )
 {
-	Init( argc, argv );
+	Core( argc, argv );
 
 	return 0;
 }
