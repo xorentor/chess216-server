@@ -1,7 +1,8 @@
-#include "game.h"
+#ifndef __GAME_H_
+#define __GAME_H_
 
-void GLogin( const char *data )
-{
+void GameLogin( void *data, const int *sd, pthread_mutex_t *mutex, int *threadFlag, Player_t *player );
+void GameCreateNew( void *data, const int *sd, pthread_mutex_t *mutex, int *threadFlag, Player_t *player );
+int GameStore( Player_t *p );
 
-}
-
+#endif

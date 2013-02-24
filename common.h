@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
@@ -12,10 +11,42 @@
 #include <pthread.h>
 #include <memory.h>
 
-#define 	_DEBUG
-#define		INLINE		inline
+#define 	_DEBUG			1
+#define		INLINE			inline
 
-#define		F_QUIT		0x0001
+#define		F_QUIT			0x0001
+
+#define		MAX_SPECTATORS		4
+#define		MAX_GAMES		512
+#define		PORTNO			5770
+#define		MAX_THREADS		1024
+#define		MAX_CLIENTS		1024
+
+#define		PLAYER_LOGGED		0x1
+#define		PLAYER_INGAME		0x2
+#define		PLAYER_PLAYING		0x4
+#define		PLAYER_CHATTING		0x8
+#define		PLAYER_AWAY		0x10
+#define		PLAYER_OFFER_DRAW	0x20
+#define		PLAYER_ACCEPT_DRAW	0x40
+#define		PLAYER_RESIGN		0x80
+#define		PLAYER_SPECTATOR	0x100
+#define		PLAYER_OFFER_REMATCH	0x200
+#define		PLAYER_ACCEPT_REMATCH	0x400
+#define		PLAYER_REFUSE_DRAW	0x800
+#define		PLAYER_REFUSE_REMATCH	0x1000
+#define		PLAYER_LOST		0x2000
+#define		PLAYER_WON		0x4000
+#define		PLAYER_INLOBBY		0x8000
+
+#define		GAME_OPENED		0x1
+#define		GAME_PLAYING		0x2
+#define		GAME_PAUSED		0x4
+#define		GAME_FINISHED		0x8
+#define		GAME_CANCELLED		0x10
+
+#define		CMD_LOGIN		0x30
+#define		CMD_CREATE_GAME		0x31
 
 typedef struct Thread_s
 {
@@ -37,6 +68,45 @@ typedef struct PacketData_s
 	char length;	
 	char data[ 225 ];
 } PacketData_t;
+
+typedef struct Player_s
+{
+	time_t loggedTime;
+	const char *username;
+	const int *sd;
+	int state;		// logged, sitting, playing, chatting, away, ...
+	int *gameId;
+	
+} Player_t;
+
+typedef struct LoginData_s
+{
+	char username[ 64 ];
+	char password[ 64 ];
+} LoginData_t;
+
+typedef struct Game_s
+{
+	int gameId;
+	Player_t *owner;
+	Player_t *player1;
+	Player_t *player2;
+	Player_t *spectators[ MAX_SPECTATORS ];
+	int player1RemTime;
+	int player2RemTime;
+	int state;
+} Game_t;
+
+typedef struct ClientThread_s
+{
+	Thread_t *threads;
+	struct sockaddr_in *cli_addr;
+	socklen_t *clilen;
+	int *sockfd;
+} ClientThread_t;
+
+Game_t *games[ MAX_GAMES ];
+Player_t *players[ MAX_CLIENTS ];
 
 INLINE int       asm_strcmp( const char *s, const char *d, const int c )
 {
