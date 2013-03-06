@@ -11,7 +11,7 @@ INLINE ParseAction ParseCmd( const char *cmd )
 			return &GameLogin;
 			break;
 		
-		case CMD_CREATE_GAME:
+		case CMD_GAME_CREATE:
 			return &GameCreateNew;	
 			break;
 
@@ -21,20 +21,19 @@ INLINE ParseAction ParseCmd( const char *cmd )
 	}
 }
 
-void Controller( void *data, const int *sd, pthread_mutex_t *mutex, int *threadFlag )
+void Controller( void *pd, const int *sd, pthread_mutex_t *mutex, int *threadFlag )
 {
-	PacketData_t *d;
-	d = (PacketData_t *)data;
-	Player_t *player;		
-
-	player = GetPlayer( sd );
-
+	Player_t *player;
 	void (*action)( void*, const int*, pthread_mutex_t*, int*, Player_t* ) = NULL;
 
-	if( (action = ParseCmd( &d->command )) == NULL ) {
+	if( ( player = GetPlayer( sd ) ) == NULL ) {
+		// max players reached or malloc failed
+	}
+
+	if( ( action = ParseCmd( &( (PacketData_t *)pd )->command ) ) == NULL ) {
 		LogMessage( LOG_WARNING, "unknown command" );
 		return;
 	}
 
-	(*action)( &d->data, sd, mutex, threadFlag, player );
+	(*action)( ( (PacketData_t *)pd )->data, sd, mutex, threadFlag, player );
 }

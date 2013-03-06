@@ -17,7 +17,7 @@
 #define		F_QUIT			0x0001
 
 #define		MAX_SPECTATORS		4
-#define		MAX_GAMES		512
+#define		MAX_GAMES		256		
 #define		PORTNO			5770
 #define		MAX_THREADS		1024
 #define		MAX_CLIENTS		1024
@@ -45,8 +45,16 @@
 #define		GAME_FINISHED		0x8
 #define		GAME_CANCELLED		0x10
 
-#define		CMD_LOGIN		0x30
-#define		CMD_CREATE_GAME		0x31
+#define		BUFFER_LEN		0x100
+
+// as same as client ***
+#define		CMD_LOGIN			0x30
+#define		CMD_GAME_CREATE			0x31
+
+#define		CMD_LOGIN_PARAM_DETAILS_ERR 	1
+#define		CMD_GAME_CREATE_PARAM_OK 	1
+#define		CMD_GAME_CREATE_PARAM_NOK	0
+// ***
 
 typedef struct Thread_s
 {
@@ -65,9 +73,20 @@ typedef struct ThreadParam_s
 typedef struct PacketData_s
 {
 	char command;
-	char length;	
-	char data[ 225 ];
+	//char length;	
+	void *data;
 } PacketData_t;
+
+typedef struct ServerByte_s
+{
+	char byte;
+} ServerByte_t;
+
+typedef struct ServerTwoBytes_s
+{
+	char byte0;
+	char byte1;
+} ServerTwoBytes_t;
 
 typedef struct Player_s
 {
@@ -81,8 +100,8 @@ typedef struct Player_s
 
 typedef struct LoginData_s
 {
-	char username[ 64 ];
-	char password[ 64 ];
+	char username[ 32 ];
+	char password[ 32 ];
 } LoginData_t;
 
 typedef struct Game_s

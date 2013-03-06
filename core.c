@@ -28,7 +28,7 @@ INLINE void DeletePthread( Thread_t *threads, const pthread_t *pt )
 */
 void *ClientInit( void *params )
 {
-    	char readBuffer[ 0x100 ];
+    	char readBuffer[ BUFFER_LEN ];
 	ThreadParam_t *threadParam;
 	int buffLen = 0, flag = 0;
 	time_t tm;
@@ -50,7 +50,7 @@ void *ClientInit( void *params )
 	while( flag != F_QUIT ) {
 		memset( readBuffer, 0, sizeof( readBuffer ) );
 		
-		buffLen = read( socketDesc, readBuffer, 255 );
+		buffLen = read( socketDesc, readBuffer, BUFFER_LEN );
 		if( buffLen <= 0 ) {
 #ifdef _DEBUG	
 		char buf[ 0x40 ];
@@ -65,8 +65,12 @@ void *ClientInit( void *params )
 		sprintf( buf, "socketID: %d pthreadID: %u buffLen: %d", socketDesc, (unsigned int)pthread_self(), buffLen );
 		LogMessage( LOG_NOTICE, buf );
 #endif
-		Controller( &readBuffer, &socketDesc, &mutex, &flag );
-		
+		// this could be removed if we point this structure to readBuffer
+		PacketData_t pd;
+		memcpy( &pd.command, &readBuffer, sizeof( pd.command ) );
+		pd.data = readBuffer + sizeof( pd.command );
+
+		Controller( &pd, &socketDesc, &mutex, &flag );
 	}
 	
 	pthread_mutex_lock( &mutex );
