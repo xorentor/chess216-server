@@ -2,25 +2,27 @@
 #include "log.h"
 #include "player.h"
 
-Player_t *GetPlayer( const int *socketDescriptor )
+Player_t *GetPlayer( ClientLocalData_t *cld )
 {	
-	if( socketDescriptor == NULL )
+	if( cld->socketDesc == 0 )
 		return NULL;
 	
 	Player_t *p;
 
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
-		if( players[ i ] != NULL ) {
-			if( *(players[ i ]->sd) == *socketDescriptor ) {
+		if( cld->cst->players[ i ] != NULL ) {
+			printf("player instance exists\n");
+
+			if( cld->cst->players[ i ]->socketDesc == cld->socketDesc ) {
 #ifdef _DEBUG
 				LogMessage( LOG_NOTICE, "Player_t retrieved by socketDescriptor" );
 #endif
-				return players[ i ];
-			}
+				return cld->cst->players[ i ];
+			}  
 		}
 	}
 	
-	if( ( p = StorePlayer( socketDescriptor ) ) == NULL ) {
+	if( ( p = StorePlayer( cld ) ) == NULL ) {
 		// send client MAX_CLIENTS reached
 #ifdef _DEBUG
 		LogMessage( LOG_WARNING, "MAX_CLIENTS reached" );
@@ -31,10 +33,10 @@ Player_t *GetPlayer( const int *socketDescriptor )
 	return p;
 }
 
-Player_t *StorePlayer( const int *socketDescriptor )
+Player_t *StorePlayer( ClientLocalData_t *cld )
 {
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
-		if( players[ i ] == NULL ) {
+		if( cld->cst->players[ i ] == NULL ) {
 			Player_t *p;
 			p = malloc( sizeof(Player_t) );
 			if( p == NULL ) {
@@ -47,8 +49,8 @@ Player_t *StorePlayer( const int *socketDescriptor )
 				LogMessage( LOG_NOTICE, "Player_t stored" );
 #endif
 
-			p->sd = socketDescriptor;
-			players[ i ] = p;
+			p->socketDesc = cld->socketDesc;		// copy this!
+			cld->cst->players[ i ] = p;
 			return p;	
 		}
 	}
@@ -56,17 +58,19 @@ Player_t *StorePlayer( const int *socketDescriptor )
 	return NULL;
 }
 
-void RemovePlayer( Player_t *p )
+void RemovePlayer( ClientLocalData_t *cld )
 {
-	if( p == NULL )
-		return;
-	
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
-		if( players[ i ] == p ) {
-			// memset( p, 0, sizeof( Player_t ) );
-			FreePlayer( p );
-			players[ i ] = NULL;
-			return;
+		if( cld->cst->players[ i ] != NULL ) {
+			if( cld->cst->players[ i ]->socketDesc == cld->socketDesc ) {
+				// memset( p, 0, sizeof( Player_t ) );
+				FreePlayer( cld->cst->players[ i ] );
+				cld->cst->players[ i ] = NULL;
+#ifdef _DEBUG
+				LogMessage( LOG_NOTICE, "Player_t released" );
+#endif
+				return;
+			}
 		}
 	}
 
@@ -76,4 +80,4 @@ void FreePlayer( Player_t *p )
 {
 	if( p != NULL)
 		free( p );
-}	
+}

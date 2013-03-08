@@ -21,19 +21,19 @@ INLINE ParseAction ParseCmd( const char *cmd )
 	}
 }
 
-void Controller( void *pd, const int *sd, pthread_mutex_t *mutex, int *threadFlag )
+void Controller( ClientLocalData_t *cld )
 {
 	Player_t *player;
-	void (*action)( void*, const int*, pthread_mutex_t*, int*, Player_t* ) = NULL;
+	void (*action)( ClientLocalData_t*, Player_t* ) = NULL;
 
-	if( ( player = GetPlayer( sd ) ) == NULL ) {
+	if( ( player = GetPlayer( cld ) ) == NULL ) {
 		// max players reached or malloc failed
 	}
 
-	if( ( action = ParseCmd( &( (PacketData_t *)pd )->command ) ) == NULL ) {
+	if( ( action = ParseCmd( &cld->pd->command ) ) == NULL ) {
 		LogMessage( LOG_WARNING, "unknown command" );
 		return;
 	}
 
-	(*action)( ( (PacketData_t *)pd )->data, sd, mutex, threadFlag, player );
+	(*action)( cld, player );
 }

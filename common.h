@@ -19,8 +19,8 @@
 #define		MAX_SPECTATORS		4
 #define		MAX_GAMES		256		
 #define		PORTNO			5770
-#define		MAX_THREADS		1024
-#define		MAX_CLIENTS		1024
+#define		MAX_THREADS		256
+#define		MAX_CLIENTS		256
 
 #define		PLAYER_LOGGED		0x1
 #define		PLAYER_INGAME		0x2
@@ -48,12 +48,13 @@
 #define		BUFFER_LEN		0x100
 
 // as same as client ***
-#define		CMD_LOGIN			0x30
-#define		CMD_GAME_CREATE			0x31
+#define		CMD_LOGIN			0x1
+#define		CMD_GAME_CREATE			0x2
 
+#define		CMD_LOGIN_PARAM_DETAILS_OK 	0
 #define		CMD_LOGIN_PARAM_DETAILS_ERR 	1
-#define		CMD_GAME_CREATE_PARAM_OK 	1
-#define		CMD_GAME_CREATE_PARAM_NOK	0
+#define		CMD_GAME_CREATE_PARAM_OK 	0
+#define		CMD_GAME_CREATE_PARAM_NOK	1
 // ***
 
 typedef struct Thread_s
@@ -63,17 +64,10 @@ typedef struct Thread_s
 	time_t spawned;
 } Thread_t;
 
-typedef struct ThreadParam_s
-{
-	int *socketId;
-	Thread_t *threads;
-		
-} ThreadParam_t;
-
 typedef struct PacketData_s
 {
 	char command;
-	//char length;	
+	char length;	
 	void *data;
 } PacketData_t;
 
@@ -92,10 +86,8 @@ typedef struct Player_s
 {
 	time_t loggedTime;
 	const char *username;
-	const int *sd;
+	int socketDesc;
 	int state;		// logged, sitting, playing, chatting, away, ...
-	int *gameId;
-	
 } Player_t;
 
 typedef struct LoginData_s
@@ -116,16 +108,43 @@ typedef struct Game_s
 	int state;
 } Game_t;
 
+typedef struct Info_s
+{
+	int playersCount;	// int despite that this can't be higher than MAX_CLIENTS
+	int gamesCount;		// int despite that this can't be higher than MAX_GAMES
+} Info_t; 
+
+typedef struct CrossThread_s
+{	
+	Game_t *games[ MAX_GAMES ];
+	Player_t *players[ MAX_CLIENTS ];
+	Info_t info;
+} CrossThread_t;
+
+typedef struct ClientLocalData_s
+{
+	int socketDesc;
+	int *quitFlag;
+	pthread_mutex_t *mutex;
+	PacketData_t *pd;
+	CrossThread_t *cst;
+} ClientLocalData_t;
+
+typedef struct ThreadParam_s
+{
+	int *socketId;
+	Thread_t *threads;
+	CrossThread_t *cst;
+} ThreadParam_t;
+
 typedef struct ClientThread_s
 {
 	Thread_t *threads;
 	struct sockaddr_in *cli_addr;
 	socklen_t *clilen;
 	int *sockfd;
+	CrossThread_t *cst;
 } ClientThread_t;
-
-Game_t *games[ MAX_GAMES ];
-Player_t *players[ MAX_CLIENTS ];
 
 INLINE int       asm_strcmp( const char *s, const char *d, const int c )
 {

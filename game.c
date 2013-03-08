@@ -19,7 +19,9 @@ void GameServerSend( PacketData_t *pd, const int *sd )
 #ifdef _DEBUG
 			LogMessage( LOG_NOTICE, "create new game OK" );
 #endif
-			memcpy( output + sizeof( pd->command ), &( ( (ServerTwoBytes_t *)pd->data )->byte0 ), sizeof( ( (ServerTwoBytes_t *)pd->data )->byte1 ) );
+			memcpy( output + sizeof( pd->command ), &( ( (ServerTwoBytes_t *)pd->data )->byte0 ), sizeof( ( (ServerTwoBytes_t *)pd->data )->byte0 ) );
+			memcpy( output + sizeof( pd->command ) + sizeof( ( (ServerTwoBytes_t *)pd->data )->byte0 ), &( ( (ServerTwoBytes_t *)pd->data )->byte1 ), sizeof( ( (ServerTwoBytes_t *)pd->data )->byte1 ) );
+//			memcpy( output + 2, "0", 1 );
 			break;
 		default:
 			return;
@@ -29,10 +31,21 @@ void GameServerSend( PacketData_t *pd, const int *sd )
 	n = write( *sd, output, sizeof( output ) );
 }
 
-void GameLogin( void *data, const int *sd, pthread_mutex_t *mutex, int *threadFlag, Player_t *player )
+void GameGetInitialData( const int *sd, pthread_mutex_t *mutex )
+{
+	//short playersCount;
+	// 1. online users
+	//players = GameGetOnlinePlayers( pthread_mutex_t *mutex );
+	
+	// 2. list of available games
+
+	// 3. 
+}
+
+void GameLogin( ClientLocalData_t *cld, Player_t *player )
 {
 	LoginData_t *ld;
-	ld = (LoginData_t *)data;	
+	ld = (LoginData_t *)(cld->pd->data);	
 	PacketData_t pd;
 	ServerByte_t b;
 	
@@ -64,16 +77,30 @@ void GameLogin( void *data, const int *sd, pthread_mutex_t *mutex, int *threadFl
 		pd.data = &b;
 		b.byte = (char )CMD_LOGIN_PARAM_DETAILS_ERR;
 			
-		GameServerSend( &pd, sd );
+		GameServerSend( &pd, &cld->socketDesc );
 		
 		return;
 	}
 
 	player->username = ld->username;
 	player->state |= PLAYER_LOGGED;
+
+#ifdef _DEBUG
+	LogMessage( LOG_NOTICE, "user logged successfully" );
+#endif	
+
+	pd.command = (char )CMD_LOGIN;
+	pd.data = &b;
+	b.byte = (char )CMD_LOGIN_PARAM_DETAILS_OK;
+		
+	GameServerSend( &pd, &cld->socketDesc );
+
+	// when a login is successful, update client
+	GameGetInitialData( &cld->socketDesc, cld->mutex );
 }
 
-void GameCreateNew( void *data, const int *sd, pthread_mutex_t *mutex, int *threadFlag, Player_t *player )
+//void GameCreateNew( void *data, const int *sd, pthread_mutex_t *mutex, int *threadFlag, Player_t *player )
+void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
 {
 	PacketData_t pd;
 	ServerTwoBytes_t b;
@@ -107,7 +134,7 @@ void GameCreateNew( void *data, const int *sd, pthread_mutex_t *mutex, int *thre
 		return;
 	}
 
-	if( ( g = GameStore( player, mutex ) ) == NULL ) {
+	if( ( g = GameStore( cld, player ) ) == NULL ) {
 		// send response to client
 		/*
 		pd.command = (char )CMD_GAME_CREATE;
@@ -127,16 +154,17 @@ void GameCreateNew( void *data, const int *sd, pthread_mutex_t *mutex, int *thre
 	b.byte0 = (char )CMD_GAME_CREATE_PARAM_OK;
 	b.byte1 = (char )g->gameId;
 		
-	GameServerSend( &pd, sd );
+	GameServerSend( &pd, &cld->socketDesc );
 }
 
-Game_t *GameStore( Player_t *p, pthread_mutex_t *mutex )
+Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 {
 	Game_t *g;
 	
-	pthread_mutex_lock( mutex );
-	for( int i = 0; i < MAX_GAMES; i++ ) {
-		if( games[ i ] == NULL ) {
+	pthread_mutex_lock( cld->mutex );
+
+	for( int i = 2; i < MAX_GAMES; i++ ) {
+		if( cld->cst->games[ i ] == NULL ) {
 			g = malloc( sizeof( Game_t ) );	
 			if( g == NULL ) {
 #ifdef _DEBUG
@@ -154,13 +182,13 @@ Game_t *GameStore( Player_t *p, pthread_mutex_t *mutex )
 			g->player1RemTime = 10.0f;
 			g->player2RemTime = 10.0f;
 			g->state |= GAME_OPENED;
-			games[ i ] = g;
+			cld->cst->games[ i ] = g;
 	
-			pthread_mutex_unlock( mutex );
+			pthread_mutex_unlock( cld->mutex );
 			return g;
 		} 
 	}	
 	
-	pthread_mutex_unlock( mutex );
+	pthread_mutex_unlock( cld->mutex );
 	return NULL;
 }
