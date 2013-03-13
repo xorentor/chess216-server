@@ -15,6 +15,10 @@ INLINE ParseAction ParseCmd( const char *cmd )
 			return &GameCreateNew;	
 			break;
 
+		case CMD_GAME_JOIN:
+			return &GameJoin;
+			break;
+
 		default:
 			return NULL;
 			break;

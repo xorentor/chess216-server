@@ -23,7 +23,7 @@
 #define		MAX_CLIENTS		256
 
 #define		PLAYER_LOGGED		0x1
-#define		PLAYER_INGAME		0x2
+#define		PLAYER_CREATED_GAME	0x2
 #define		PLAYER_PLAYING		0x4
 #define		PLAYER_CHATTING		0x8
 #define		PLAYER_AWAY		0x10
@@ -37,7 +37,7 @@
 #define		PLAYER_REFUSE_REMATCH	0x1000
 #define		PLAYER_LOST		0x2000
 #define		PLAYER_WON		0x4000
-#define		PLAYER_INLOBBY		0x8000
+#define		PLAYER_INGAME		0x8000
 
 #define		GAME_OPENED		0x1
 #define		GAME_PLAYING		0x2
@@ -47,15 +47,20 @@
 
 #define		BUFFER_LEN		0x100
 
-// as same as client ***
-#define		CMD_LOGIN			0x1
-#define		CMD_GAME_CREATE			0x2
-
-#define		CMD_LOGIN_PARAM_DETAILS_OK 	0
-#define		CMD_LOGIN_PARAM_DETAILS_ERR 	1
-#define		CMD_GAME_CREATE_PARAM_OK 	0
-#define		CMD_GAME_CREATE_PARAM_NOK	1
-// ***
+// as same as server ***
+enum {
+	CMD_LOGIN = 1,
+	CMD_GAME_CREATE,
+	CMD_GAME_JOIN,
+};      
+                                          
+enum {
+	CMD_LOGIN_PARAM_DETAILS_OK = 0,
+	CMD_LOGIN_PARAM_DETAILS_ERR,
+	CMD_GAME_CREATE_PARAM_OK,
+	CMD_GAME_CREATE_PARAM_NOK,
+};
+// ***  
 
 typedef struct Thread_s
 {
@@ -90,6 +95,11 @@ typedef struct Player_s
 	int state;		// logged, sitting, playing, chatting, away, ...
 } Player_t;
 
+typedef struct JoinData_s
+{       
+        char gameId;
+} JoinData_t;
+
 typedef struct LoginData_s
 {
 	char username[ 32 ];
@@ -99,7 +109,6 @@ typedef struct LoginData_s
 typedef struct Game_s
 {
 	int gameId;
-	Player_t *owner;
 	Player_t *player1;
 	Player_t *player2;
 	Player_t *spectators[ MAX_SPECTATORS ];

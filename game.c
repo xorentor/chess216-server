@@ -2,34 +2,7 @@
 #include "game.h"
 #include "player.h"
 #include "log.h"
-
-void GameServerSend( PacketData_t *pd, const int *sd )
-{
-	char output[ BUFFER_LEN ];
-	int n;
-
-	memcpy( output, &pd->command, sizeof( pd->command ) );
-
-	switch( (int) pd->command ) {
-		case CMD_LOGIN:
-			memcpy( output + sizeof( pd->command ), &( ( (ServerByte_t *)pd->data )->byte ), sizeof( ( (ServerByte_t *)pd->data )->byte ) );
-			break;
-		
-		case CMD_GAME_CREATE:
-#ifdef _DEBUG
-			LogMessage( LOG_NOTICE, "create new game OK" );
-#endif
-			memcpy( output + sizeof( pd->command ), &( ( (ServerTwoBytes_t *)pd->data )->byte0 ), sizeof( ( (ServerTwoBytes_t *)pd->data )->byte0 ) );
-			memcpy( output + sizeof( pd->command ) + sizeof( ( (ServerTwoBytes_t *)pd->data )->byte0 ), &( ( (ServerTwoBytes_t *)pd->data )->byte1 ), sizeof( ( (ServerTwoBytes_t *)pd->data )->byte1 ) );
-//			memcpy( output + 2, "0", 1 );
-			break;
-		default:
-			return;
-			break;
-	}
-
-	n = write( *sd, output, sizeof( output ) );
-}
+#include "net.h"
 
 void GameGetInitialData( const int *sd, pthread_mutex_t *mutex )
 {
@@ -40,6 +13,40 @@ void GameGetInitialData( const int *sd, pthread_mutex_t *mutex )
 	// 2. list of available games
 
 	// 3. 
+}
+
+void GameJoin( ClientLocalData_t *cld, Player_t *player )
+{
+	JoinData_t *jd;
+	jd = cld->pd->data;
+
+	if( ( player->state & PLAYER_LOGGED ) != PLAYER_LOGGED ) 
+		return;
+
+	if( player->state & PLAYER_INGAME )
+		return;
+
+#ifdef _DEBUG
+	LogMessage( LOG_NOTICE, "game join" );
+#endif
+
+	pthread_mutex_lock( cld->mutex );
+	for( int i = 0; i < MAX_GAMES; i++ ) {
+		if( cld->cst->games[ i ] != NULL ) {
+			if( cld->cst->games[ i ]->gameId == (int )jd->gameId && ( cld->cst->games[ i ]->state & GAME_OPENED ) ) {
+				for( int k = 0; k < MAX_SPECTATORS; k++ ) {
+					if( cld->cst->games[ i ]->spectators[ k ] == NULL ) {
+						cld->cst->games[ i ]->spectators[ k ] = player;
+						player->state |= PLAYER_INGAME;
+						player->state |= PLAYER_SPECTATOR;
+						break;
+					}
+				}
+				break;
+			}	
+		}
+	}
+	pthread_mutex_unlock( cld->mutex );
 }
 
 void GameLogin( ClientLocalData_t *cld, Player_t *player )
@@ -77,7 +84,7 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 		pd.data = &b;
 		b.byte = (char )CMD_LOGIN_PARAM_DETAILS_ERR;
 			
-		GameServerSend( &pd, &cld->socketDesc );
+		ReplyToPlayer( &pd, &cld->socketDesc );
 		
 		return;
 	}
@@ -93,7 +100,7 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 	pd.data = &b;
 	b.byte = (char )CMD_LOGIN_PARAM_DETAILS_OK;
 		
-	GameServerSend( &pd, &cld->socketDesc );
+	ReplyToPlayer( &pd, &cld->socketDesc );
 
 	// when a login is successful, update client
 	GameGetInitialData( &cld->socketDesc, cld->mutex );
@@ -120,20 +127,13 @@ void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
 		return;
 	}
 
-	if( player->state & PLAYER_INGAME ) {
+	if( player->state & PLAYER_CREATED_GAME ) {
 #ifdef _DEBUG
-		LogMessage( LOG_NOTICE, "GameCreateNew player in game already" );
+		LogMessage( LOG_NOTICE, "Player already created a game" );
 #endif
 		return;
 	}
 	
-	if( player->state & PLAYER_PLAYING ) {
-#ifdef _DEBUG
-		LogMessage( LOG_NOTICE, "GameCreateNew player playing" );
-#endif
-		return;
-	}
-
 	if( ( g = GameStore( cld, player ) ) == NULL ) {
 		// send response to client
 		/*
@@ -141,7 +141,7 @@ void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
 		pd.data = &b;
 		b.byte = (char )CMD_GAME_CREATE_PARAM_NOK;
 		
-		GameServerSend( &pd, sd );
+		ReplyToPlayer( &pd, sd );
 		*/
 #ifdef _DEBUG
 		LogMessage( LOG_WARNING, "GameStore() failed, MAX_GAMES or malloc" );
@@ -154,7 +154,8 @@ void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
 	b.byte0 = (char )CMD_GAME_CREATE_PARAM_OK;
 	b.byte1 = (char )g->gameId;
 		
-	GameServerSend( &pd, &cld->socketDesc );
+//	ReplyToPlayer( &pd, &cld->socketDesc );
+	BroadcastToPlayers( cld, &pd );
 }
 
 Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
@@ -174,11 +175,10 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 			}
 			
 			// default player state
-			p->state |= PLAYER_INGAME;
+			p->state |= PLAYER_CREATED_GAME;
 
 			// default game state
 			g->gameId = i;
-			g->owner = p;
 			g->player1RemTime = 10.0f;
 			g->player2RemTime = 10.0f;
 			g->state |= GAME_OPENED;

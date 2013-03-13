@@ -48,9 +48,15 @@ Player_t *StorePlayer( ClientLocalData_t *cld )
 #ifdef _DEBUG
 				LogMessage( LOG_NOTICE, "Player_t stored" );
 #endif
-
 			p->socketDesc = cld->socketDesc;		// copy this!
+			p->state = 0;
+
 			cld->cst->players[ i ] = p;
+			( cld->cst->info.playersCount )++;
+//			Broadcast( cld, ++( );
+#ifdef _DEBUG
+			LogMessage( LOG_NOTICE, "Player_t stored" );
+#endif
 			return p;	
 		}
 	}
@@ -65,7 +71,9 @@ void RemovePlayer( ClientLocalData_t *cld )
 			if( cld->cst->players[ i ]->socketDesc == cld->socketDesc ) {
 				// memset( p, 0, sizeof( Player_t ) );
 				FreePlayer( cld->cst->players[ i ] );
+
 				cld->cst->players[ i ] = NULL;
+				( cld->cst->info.playersCount )--;
 #ifdef _DEBUG
 				LogMessage( LOG_NOTICE, "Player_t released" );
 #endif

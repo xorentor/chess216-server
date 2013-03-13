@@ -71,7 +71,7 @@ void *ClientInit( void *params )
 		// this could be removed if we point this structure to readBuffer
 		PacketData_t pd;
 		memcpy( &pd.command, &readBuffer, sizeof( pd.command ) );
-		pd.data = readBuffer + sizeof( pd.command );
+		pd.data = readBuffer + sizeof( pd.command ) + sizeof( pd.length );
 
 		data.pd = &pd;
 		Controller( &data );
@@ -217,6 +217,9 @@ void Core( int argc, char **argv )
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
 		cst.games[ i ] = NULL;
 	}
+	
+	cst.info.playersCount = 0;
+	cst.info.gamesCount = 0;
 
 	ct.threads = threads;
 	ct.cli_addr = &cli_addr;
@@ -227,6 +230,7 @@ void Core( int argc, char **argv )
 		LogMessage( LOG_ERROR, "no port provided" );
         	exit(1);
      	}*/
+
      	sockfd = socket( AF_INET, SOCK_STREAM, 0 );
   	if( sockfd < 0 ) {
 		LogMessage( LOG_ERROR, "opening socket" );
