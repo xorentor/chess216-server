@@ -11,8 +11,6 @@ Player_t *GetPlayer( ClientLocalData_t *cld )
 
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
 		if( cld->cst->players[ i ] != NULL ) {
-			printf("player instance exists\n");
-
 			if( cld->cst->players[ i ]->socketDesc == cld->socketDesc ) {
 #ifdef _DEBUG
 				LogMessage( LOG_NOTICE, "Player_t retrieved by socketDescriptor" );

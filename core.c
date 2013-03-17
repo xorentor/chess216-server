@@ -239,7 +239,7 @@ void Core( int argc, char **argv )
 	pthread_mutex_init( &mutex, NULL );
 	InitDescriptors();
 	memset( (char *)&serv_addr, 0, sizeof( serv_addr ) );
-     	portno = 5771; //atoi( argv[1] );
+     	portno = 5770; //atoi( argv[1] );
      	serv_addr.sin_family = AF_INET;
      	serv_addr.sin_addr.s_addr = INADDR_ANY;
      	serv_addr.sin_port = htons( portno );

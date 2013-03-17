@@ -21,6 +21,8 @@
 #define		PORTNO			5770
 #define		MAX_THREADS		256
 #define		MAX_CLIENTS		256
+#define         COLOR_WHITE             1
+#define         COLOR_BLACK             2
 
 #define		PLAYER_LOGGED		0x1
 #define		PLAYER_CREATED_GAME	0x2
@@ -52,6 +54,7 @@ enum {
 	CMD_LOGIN = 1,
 	CMD_GAME_CREATE,
 	CMD_GAME_JOIN,
+	CMD_GAME_SIT,
 };      
                                           
 enum {
@@ -59,6 +62,9 @@ enum {
 	CMD_LOGIN_PARAM_DETAILS_ERR,
 	CMD_GAME_CREATE_PARAM_OK,
 	CMD_GAME_CREATE_PARAM_NOK,
+	CMD_GAME_JOIN_PARAM_OK,
+	CMD_GAME_JOIN_PARAM_NOK,
+	CMD_GAME_BEGIN_PARAM_OK,
 };
 // ***  
 
@@ -90,7 +96,7 @@ typedef struct ServerTwoBytes_s
 typedef struct Player_s
 {
 	time_t loggedTime;
-	const char *username;
+	char username[ 32 ];
 	int socketDesc;
 	int state;		// logged, sitting, playing, chatting, away, ...
 } Player_t;
@@ -99,6 +105,19 @@ typedef struct JoinData_s
 {       
         char gameId;
 } JoinData_t;
+
+typedef struct GameSitServerData_s
+{                       
+        char slot;
+        char username[ 32 ];
+	char gameBegin;
+} GameSitServerData_t;  
+
+typedef struct GameSitData_s
+{
+        char gameId;
+        char slot;
+} GameSitData_t;
 
 typedef struct LoginData_s
 {
