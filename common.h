@@ -14,6 +14,9 @@
 #define 	_DEBUG			1
 #define		INLINE			inline
 
+#define		ctrue			1
+#define		cfalse			0
+
 #define		F_QUIT			0x0001
 
 #define		MAX_SPECTATORS		4
@@ -55,6 +58,7 @@ enum {
 	CMD_GAME_CREATE,
 	CMD_GAME_JOIN,
 	CMD_GAME_SIT,
+        CMD_GAME_MOVEPIECE,
 };      
                                           
 enum {
@@ -65,6 +69,22 @@ enum {
 	CMD_GAME_JOIN_PARAM_OK,
 	CMD_GAME_JOIN_PARAM_NOK,
 	CMD_GAME_BEGIN_PARAM_OK,
+};
+
+enum
+{
+        BLACK_KING = 0,
+        WHITE_KING,
+        BLACK_QUEEN,
+        WHITE_QUEEN,
+        BLACK_ROOK,
+        WHITE_ROOK,
+        BLACK_BISHOP,
+        WHITE_BISHOP,
+        BLACK_KNIGHT,
+        WHITE_KNIGHT,
+        BLACK_PAWN,
+        WHITE_PAWN
 };
 // ***  
 
@@ -101,10 +121,33 @@ typedef struct Player_s
 	int state;		// logged, sitting, playing, chatting, away, ...
 } Player_t;
 
+typedef struct Piece_s
+{
+// leave these to client
+//	int x;	
+//	int y;
+	char xpos;
+	char ypos;
+	char ID;
+	char skinID;
+	char color;
+	int state;
+} Piece_t;
+
+typedef Piece_t Pieces_t[ 32 ];
+
 typedef struct JoinData_s
 {       
         char gameId;
 } JoinData_t;
+
+typedef struct MovePieceData_s
+{
+        char xsrc;      
+        char ysrc;
+        char xdest;     
+        char ydest;
+} MovePieceData_t;
 
 typedef struct GameSitServerData_s
 {                       
@@ -125,12 +168,21 @@ typedef struct LoginData_s
 	char password[ 32 ];
 } LoginData_t;
 
+typedef struct GamePieceMoveSrv_s
+{
+	char pieceId;
+	char xdest;
+	char ydest;
+} GamePieceMoveSrv_t;
+
 typedef struct Game_s
 {
 	int gameId;
+	Pieces_t *listPieces;
 	Player_t *player1;
 	Player_t *player2;
 	Player_t *spectators[ MAX_SPECTATORS ];
+	Player_t *nextMove;
 	int player1RemTime;
 	int player2RemTime;
 	int state;
@@ -144,8 +196,9 @@ typedef struct Info_s
 
 typedef struct CrossThread_s
 {	
-	Game_t *games[ MAX_GAMES ];
-	Player_t *players[ MAX_CLIENTS ];
+	Piece_t pieces[ MAX_GAMES ][ 32 ];
+	Game_t games[ MAX_GAMES ];
+	Player_t players[ MAX_CLIENTS ];
 	Info_t info;
 } CrossThread_t;
 
@@ -200,5 +253,8 @@ INLINE int       asm_strcmp( const char *s, const char *d, const int c )
         return r;
 }
 
+#ifndef NULL
+#define NULL ((void *)0)
+#endif
 
 #endif

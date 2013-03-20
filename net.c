@@ -82,14 +82,14 @@ void BroadcastToPlayers( ClientLocalData_t *cld, PacketData_t *pd )
 	//pthread_mutex_lock( cld->mutex );
 
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
-		if( cld->cst->players[ i ] != NULL ) {
+		if( cld->cst->players[ i ].socketDesc != 0 ) {
 #ifdef _DEBUG
 			char buf[ 0x40 ];
-			sprintf( buf, "broadcasttoPlayers: %s\n", cld->cst->players[ i ]->username );
+			sprintf( buf, "broadcasttoPlayers: %s\n", cld->cst->players[ i ].username );
 			LogMessage( LOG_NOTICE, buf );
 #endif
 
-			PacketSend( pd, &cld->cst->players[ i ]->socketDesc );
+			PacketSend( pd, &cld->cst->players[ i ].socketDesc );
 		}
 	}
 

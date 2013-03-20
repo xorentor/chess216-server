@@ -2,6 +2,7 @@
 #include "log.h"
 #include "core.h"
 #include "controller.h"
+#include "chess.h"
 #include "game.h"
 #include "player.h"
 
@@ -210,13 +211,9 @@ void Core( int argc, char **argv )
 	ClientThread_t ct;
 	CrossThread_t cst;
 
-	for( int i = 0; i < MAX_CLIENTS; i++ ) {
-		cst.players[ i ] = NULL;
-	}
-
-	for( int i = 0; i < MAX_CLIENTS; i++ ) {
-		cst.games[ i ] = NULL;
-	}
+	memset( &cst.players, 0, sizeof( cst.players ) );
+	memset( &cst.games, 0, sizeof( cst.games ) );
+	memset( &cst.pieces, 0, sizeof( cst.pieces ) );
 	
 	cst.info.playersCount = 0;
 	cst.info.gamesCount = 0;

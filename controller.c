@@ -21,7 +21,9 @@ INLINE ParseAction ParseCmd( const char *cmd )
 		case CMD_GAME_SIT:
 			return &GameSit;
 			break;
-		
+        	case CMD_GAME_MOVEPIECE:
+			return &GameMovePiece;
+			break;
 		default:
 			return NULL;
 			break;

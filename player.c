@@ -10,12 +10,12 @@ Player_t *GetPlayer( ClientLocalData_t *cld )
 	Player_t *p;
 
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
-		if( cld->cst->players[ i ] != NULL ) {
-			if( cld->cst->players[ i ]->socketDesc == cld->socketDesc ) {
+		if( cld->cst->players[ i ].socketDesc != 0 ) {
+			if( cld->cst->players[ i ].socketDesc == cld->socketDesc ) {
 #ifdef _DEBUG
 				LogMessage( LOG_NOTICE, "Player_t retrieved by socketDescriptor" );
 #endif
-				return cld->cst->players[ i ];
+				return &( cld->cst->players[ i ] );
 			}  
 		}
 	}
@@ -34,8 +34,10 @@ Player_t *GetPlayer( ClientLocalData_t *cld )
 Player_t *StorePlayer( ClientLocalData_t *cld )
 {
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
-		if( cld->cst->players[ i ] == NULL ) {
+		if( cld->cst->players[ i ].socketDesc == 0 ) {
 			Player_t *p;
+			p = &( cld->cst->players[ i ] );
+/*
 			p = malloc( sizeof(Player_t) );
 			if( p == NULL ) {
 #ifdef _DEBUG
@@ -46,10 +48,11 @@ Player_t *StorePlayer( ClientLocalData_t *cld )
 #ifdef _DEBUG
 				LogMessage( LOG_NOTICE, "Player_t stored" );
 #endif
+*/
 			p->socketDesc = cld->socketDesc;		// copy this!
 			p->state = 0;
 
-			cld->cst->players[ i ] = p;
+//			cld->cst->players[ i ] = p;
 			( cld->cst->info.playersCount )++;
 //			Broadcast( cld, ++( );
 #ifdef _DEBUG
@@ -65,18 +68,15 @@ Player_t *StorePlayer( ClientLocalData_t *cld )
 void RemovePlayer( ClientLocalData_t *cld )
 {
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
-		if( cld->cst->players[ i ] != NULL ) {
-			if( cld->cst->players[ i ]->socketDesc == cld->socketDesc ) {
-				// memset( p, 0, sizeof( Player_t ) );
-				FreePlayer( cld->cst->players[ i ] );
+		if( cld->cst->players[ i ].socketDesc == cld->socketDesc ) {
+			// memset( p, 0, sizeof( Player_t ) );
+			FreePlayer( &cld->cst->players[ i ] );
 
-				cld->cst->players[ i ] = NULL;
-				( cld->cst->info.playersCount )--;
+			( cld->cst->info.playersCount )--;
 #ifdef _DEBUG
-				LogMessage( LOG_NOTICE, "Player_t released" );
+			LogMessage( LOG_NOTICE, "Player_t released" );
 #endif
-				return;
-			}
+			return;
 		}
 	}
 
@@ -84,6 +84,7 @@ void RemovePlayer( ClientLocalData_t *cld )
 
 void FreePlayer( Player_t *p )
 {
-	if( p != NULL)
-		free( p );
+//	if( p != NULL)
+//		free( p );
+	memset( p, 0, sizeof( Player_t ) );
 }
