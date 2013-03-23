@@ -18,7 +18,7 @@ void GameGetInitialData( const int *sd, pthread_mutex_t *mutex )
 
 INLINE void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 {
-	int r, piece;
+	BYTE r, piece = 0;
 	Game_t *g;	
 	MovePieceData_t *md;
 	PacketData_t pd;
@@ -28,6 +28,9 @@ INLINE void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 	pd.data = &ps;
 
 	md = cld->pd->data;
+#ifdef _DEBUG
+	LogMessage( LOG_NOTICE, "GameMovePiece: start" );
+#endif
 
 	if( ( g = GameByPlayer( cld, player ) ) == NULL ) {
 #ifdef _DEBUG
@@ -50,7 +53,7 @@ INLINE void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 		return;
 	}
 
-	r = ClientMovePiece( md->xsrc, md->ysrc, md->xdest, md->ydest, &piece );
+	r = ClientMovePiece( &md->xsrc, &md->ysrc, &md->xdest, &md->ydest, &piece, ( g->nextMove == g->player1 ? COLOR_WHITE : COLOR_BLACK ) );
 
 	pd.command = (char )CMD_GAME_MOVEPIECE;
 
@@ -65,19 +68,28 @@ INLINE void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 			else
 				g->nextMove = g->player1;
 
+			BroadcastToGame( g, &pd );
 			break;
 		case 2:
-			// check mate white
+			ps.pieceId = (char )piece;
+			ps.xdest = (char )md->xdest;
+			ps.ydest = (char )md->ydest;
+			ps.checkMate = (char )COLOR_WHITE;
+
+			BroadcastToGame( g, &pd );
 			break;
 		case 3:
-			// check mate black
+			ps.pieceId = (char )piece;
+			ps.xdest = (char )md->xdest;
+			ps.ydest = (char )md->ydest;
+			ps.checkMate = (char )COLOR_BLACK;
+
+			BroadcastToGame( g, &pd );
 			break;
 		default:
-			// failed
+			// TODO: let client know - illegal turn
 			break;
 	}
-
-	BroadcastToGame( g, &pd );
 }
 
 INLINE void GameSit( ClientLocalData_t *cld, Player_t *player )
@@ -109,14 +121,15 @@ INLINE void GameSit( ClientLocalData_t *cld, Player_t *player )
 	LogMessage( LOG_NOTICE, "game sit" );
 #endif
 
-	pthread_mutex_lock( cld->mutex );
+//	pthread_mutex_lock( cld->mutex );
 	for( int i = 0; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId != 0 ) {
 			if( cld->cst->games[ i ].gameId == (int )sd->gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
-				if( ( cld->cst->games[ i ].player1 == 0 && (int )sd->slot == COLOR_WHITE ) || ( cld->cst->games[ i ].player2 == 0 && (int )sd->slot == COLOR_BLACK ) ) {
+				if( ( cld->cst->games[ i ].player1 == NULL && (int )sd->slot == COLOR_WHITE ) || ( cld->cst->games[ i ].player2 == NULL && (int )sd->slot == COLOR_BLACK ) ) {
 					for( int k = 0; k < MAX_SPECTATORS; k++ ) {
 						if( cld->cst->games[ i ].spectators[ k ] == player ) {
 							cld->cst->games[ i ].spectators[ k ] = NULL;
+							player->state ^= PLAYER_SPECTATOR;
 							break;
 						}
 					}
@@ -168,7 +181,7 @@ INLINE void GameSit( ClientLocalData_t *cld, Player_t *player )
 		}
 	}	
 
-	pthread_mutex_unlock( cld->mutex );
+//	pthread_mutex_unlock( cld->mutex );
 
 	// TODO: respond to client - sit request failed
 }
@@ -190,7 +203,7 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 	LogMessage( LOG_NOTICE, "game join" );
 #endif
 
-	pthread_mutex_lock( cld->mutex );
+//	pthread_mutex_lock( cld->mutex );
 	for( int i = 0; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId != 0 ) {
 			if( cld->cst->games[ i ].gameId == (int )jd->gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
@@ -200,7 +213,6 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 						player->state |= PLAYER_INGAME;
 						player->state |= PLAYER_SPECTATOR;
 
-						printf( "joined, listpieces ptr: %p\n", cld->cst->games[ i ].listPieces );
 						pd.command = (char )CMD_GAME_JOIN;
 						pd.data = &b;
 						b.byte0 = (char )CMD_GAME_JOIN_PARAM_OK;
@@ -215,7 +227,7 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 			}	
 		}
 	}
-	pthread_mutex_unlock( cld->mutex );
+//	pthread_mutex_unlock( cld->mutex );
 
 	// TODO: game couldn't be found, respond to client
 }
@@ -253,7 +265,7 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 #endif	
 		pd.command = (char )CMD_LOGIN;
 		pd.data = &b;
-		b.byte = (char )CMD_LOGIN_PARAM_DETAILS_ERR;
+		b.byte0 = (char )CMD_LOGIN_PARAM_DETAILS_ERR;
 			
 		ReplyToPlayer( &pd, &cld->socketDesc );
 		
@@ -270,7 +282,7 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 
 	pd.command = (char )CMD_LOGIN;
 	pd.data = &b;
-	b.byte = (char )CMD_LOGIN_PARAM_DETAILS_OK;
+	b.byte0 = (char )CMD_LOGIN_PARAM_DETAILS_OK;
 		
 	ReplyToPlayer( &pd, &cld->socketDesc );
 
@@ -329,26 +341,31 @@ void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
 
 Game_t *GameByPlayer( ClientLocalData_t *cld, Player_t *p )
 {
-	pthread_mutex_lock( cld->mutex );
+//	pthread_mutex_lock( cld->mutex );
+	if( p == NULL )
+		return NULL;
 
 	for( int i = 0; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId != 0 ) {
 			if( cld->cst->games[ i ].player1 == p || cld->cst->games[ i ].player2 == p ) {
-				pthread_mutex_unlock( cld->mutex );
+				//pthread_mutex_unlock( cld->mutex );
 				return &cld->cst->games[ i ];
 			}
 		}		
 	}
 
-	pthread_mutex_unlock( cld->mutex );
+//	pthread_mutex_unlock( cld->mutex );
 	return NULL;
 }
 
 Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 {
 	Game_t *g;
+
+	if( p == NULL )
+		return NULL;
 	
-	pthread_mutex_lock( cld->mutex );
+//	pthread_mutex_lock( cld->mutex );
 
 	for( int i = 1; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId == 0 ) {
@@ -371,12 +388,12 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 			g->state |= GAME_OPENED;
 			g->nextMove = NULL;
 	
-			pthread_mutex_unlock( cld->mutex );
+//			pthread_mutex_unlock( cld->mutex );
 			return g;
 		} 
 	}	
 	
-	pthread_mutex_unlock( cld->mutex );
+//	pthread_mutex_unlock( cld->mutex );
 	return NULL;
 }
 

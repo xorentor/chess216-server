@@ -17,7 +17,7 @@ void PacketSend( PacketData_t *pd, const int *sd )
 #ifdef _DEBUG
 			LogMessage( LOG_NOTICE, "server reply: game login" );
 #endif
-			memcpy( output + sizeof( pd->command ), &( ( (ServerByte_t *)pd->data )->byte ), sizeof( ( (ServerByte_t *)pd->data )->byte ) );
+			memcpy( output + sizeof( pd->command ), &( ( (ServerByte_t *)pd->data )->byte0 ), sizeof( ( (ServerByte_t *)pd->data )->byte0 ) );
 			break;
 		
 		case CMD_GAME_CREATE:
@@ -44,11 +44,24 @@ void PacketSend( PacketData_t *pd, const int *sd )
 			memcpy( output + sizeof( pd->command ) + sizeof( ( (GameSitServerData_t *)pd->data )->slot ), &( ( (GameSitServerData_t *)pd->data )->username ), sizeof( ( (GameSitServerData_t *)pd->data )->username ) );
 			memcpy( output + sizeof( pd->command ) + sizeof( ( (GameSitServerData_t *)pd->data )->slot ) + sizeof( ( (GameSitServerData_t *)pd->data )->username ), &( ( (GameSitServerData_t *)pd->data )->gameBegin ), sizeof( ( (GameSitServerData_t *)pd->data )->gameBegin ) );
 			break;
+
+		case CMD_GAME_MOVEPIECE:
+#ifdef _DEBUG
+			LogMessage( LOG_NOTICE, "server reply: game move piece" );
+#endif
+			memcpy( output + sizeof( pd->command ), &( ( (GamePieceMoveSrv_t *)pd->data )->pieceId ), sizeof( (GamePieceMoveSrv_t *)pd->data )->pieceId );
+			memcpy( output + sizeof( pd->command ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->pieceId ), &( ( (GamePieceMoveSrv_t *)pd->data )->xdest ), sizeof( ( (GamePieceMoveSrv_t *)pd->data )->xdest ) );
+			memcpy( output + sizeof( pd->command ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->pieceId ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->xdest ), &( ( (GamePieceMoveSrv_t *)pd->data )->ydest ), sizeof( ( (GamePieceMoveSrv_t *)pd->data )->ydest ) );
+			memcpy( output + sizeof( pd->command ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->pieceId ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->xdest ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->ydest ) , &( ( (GamePieceMoveSrv_t *)pd->data )->checkMate ), sizeof( ( (GamePieceMoveSrv_t *)pd->data )->checkMate ) );
+
+			break;
+
 		default:
 			return;
 			break;
 	}
 
+	printf( "WRITE TO SD: %d\n", *sd );
 	n = write( *sd, output, sizeof( output ) );
 }
 
@@ -59,18 +72,36 @@ void BroadcastToGame( Game_t *game, PacketData_t *pd )
 
 	if( game == NULL ) {
 		//pthread_mutex_unlock( cld->mutex );
+#ifdef _DEBUG
+		LogMessage( LOG_NOTICE, "boardcastGames: game null" );
+#endif
 		return;
 	}
+#ifdef _DEBUG
+	LogMessage( LOG_NOTICE, "boardcastGames: send to games" );
+#endif
 
-	if( game->player1 != NULL )
+	if( game->player1 != NULL ) {
 		PacketSend( pd, &game->player1->socketDesc );
+#ifdef _DEBUG
+		LogMessage( LOG_NOTICE, "boardcastGames: player1 exists" );
+#endif
+	}
 
-	if( game->player2 != NULL )
+	if( game->player2 != NULL ) {
 		PacketSend( pd, &game->player2->socketDesc );
+#ifdef _DEBUG
+		LogMessage( LOG_NOTICE, "boardcastGames: player2 exists" );
+#endif
+	}
 	
 	for( int i = 0; i < MAX_SPECTATORS; i++ ) {
-		if( game->spectators[ i ] != NULL )
+		if( game->spectators[ i ] != NULL ) {
 			PacketSend( pd, &game->spectators[ i ]->socketDesc );
+#ifdef _DEBUG
+		LogMessage( LOG_NOTICE, "boardcastGames: spectator exists" );
+#endif
+		}
 	}
 
 	// already locked when called

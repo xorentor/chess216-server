@@ -65,11 +65,64 @@ Player_t *StorePlayer( ClientLocalData_t *cld )
 	return NULL;
 }
 
+void RemoveGame( ClientLocalData_t *cld, Player_t *p )
+{
+	Game_t *g;
+	int players = 0;
+	g = NULL;
+
+	for( int i = 0; i < MAX_GAMES; i++ ) {
+		if( cld->cst->games[ i ].player1 == p ) {
+			g = &cld->cst->games[ i ];
+			cld->cst->games[ i ].player1 = NULL;
+			break;
+		}
+
+		if( cld->cst->games[ i ].player2 == p  ) {
+			g = &cld->cst->games[ i ];
+			cld->cst->games[ i ].player2 = NULL;
+			break;
+		}
+
+		for( int j = 0; j < MAX_SPECTATORS; j++ ) {
+			if( cld->cst->games[ i ].spectators[ j ] == p ) {
+				g = &cld->cst->games[ i ];
+				cld->cst->games[ i ].spectators[ j ] = NULL;
+				break;
+			}
+		}
+	}
+
+	if( g != NULL ) {
+		if( g->player1 != NULL )
+			players++;
+
+		if( g->player2 != NULL )
+			players++;
+
+		for( int j = 0; j < MAX_SPECTATORS; j++ ) 
+			if( g->spectators[ j ] != NULL )
+				players++;
+	}
+
+#ifdef _DEBUG
+	char buf[ 0x40 ];
+	sprintf( buf, "RemoveGame: players count: %d", players );
+	LogMessage( LOG_NOTICE, buf );
+#endif
+
+	// no player left?
+	if( players == 0 )
+		memset( g, 0, sizeof( Game_t ) );
+}
+
 void RemovePlayer( ClientLocalData_t *cld )
 {
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
 		if( cld->cst->players[ i ].socketDesc == cld->socketDesc ) {
-			// memset( p, 0, sizeof( Player_t ) );
+			// delete game if last player left
+			RemoveGame( cld, &( cld->cst->players[ i ] ) );
+
 			FreePlayer( &cld->cst->players[ i ] );
 
 			( cld->cst->info.playersCount )--;

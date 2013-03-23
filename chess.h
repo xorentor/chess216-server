@@ -15,30 +15,29 @@ typedef struct Move_s
 	char destY;
 } Move_t;
 
-int ClientMovePiece( const int xsrc, const int ysrc, const int x, const int y, int *piece );
+BYTE ClientMovePiece( const BYTE *xsrc, const BYTE *ysrc, const BYTE *x, const BYTE *y, BYTE *piece, const BYTE color );
 void InitPieces( Pieces_t *pieces );	
 
-void AddPiece( Pieces_t *listPieces, const int i, const int x, const int y, const int skin, const int color );
-int MoveKnight( Piece_t *piece, const int xdest, const int ydest );
+void AddPiece( Pieces_t *listPieces, const BYTE i, const BYTE x, const BYTE y, const BYTE skin, const BYTE color );
 void DestroyPieces();
 
-int CheckMove( Piece_t *piece, const int xdest, const int ydest );
-int MoveBishop( Piece_t *piece, const int xdest, const int ydest );
-int MoveRook( Piece_t *piece, const int xdest, const int ydest );
-int MoveQueen( Piece_t *piece, const int xdest, const int ydest );
-int MoveKing( Piece_t *piece, const int xdest, const int ydest );
-int MovePawn( Piece_t *piece, const int xdest, const int ydest );
+BYTE CheckMove( Piece_t *piece, const BYTE xdest, const BYTE ydest );
+BYTE MoveKnight( Piece_t *piece, const BYTE *xdest, const BYTE *ydest );
+BYTE MoveBishop( Piece_t *piece, const BYTE *xdest, const BYTE *ydest );
+BYTE MoveRook( Piece_t *piece, const BYTE *xdest, const BYTE *ydest );
+BYTE MoveQueen( Piece_t *piece, const BYTE *xdest, const BYTE *ydest );
+BYTE MoveKing( Piece_t *piece, const BYTE *xdest, const BYTE *ydest );
+BYTE MovePawn( Piece_t *piece, const BYTE *xdest, const BYTE *ydest );
 
-int KingCheck( const int color );
-int KingCheckSimulate( Piece_t *piece, const int xdest, const int ydest );
-int KingCheckMate( const int color );
-int SquareChecked( const int x, const int y, const int color );
-int SquareFree( const int x, const int y );
-int EnPassant( Piece_t *piece, const int xdest, const int ydest );
+BYTE KingCheck( const BYTE *color );
+BYTE KingCheckSimulate( Piece_t *piece, const BYTE xdest, const BYTE ydest );
+BYTE KingCheckMate( const BYTE color );
+BYTE SquareChecked( const BYTE x, const BYTE y, const BYTE *color );
+BYTE SquareFree( const BYTE x, const BYTE y );
+BYTE EnPassant( Piece_t *piece, const BYTE *xdest, const BYTE *ydest );
 
-int MovePiece( Piece_t *piece, const int xdest, const int ydest );
-int MovePieceIter( const int j, const int k, const int xdest, const int ydest, Piece_t *piece );
-void FinalMovePiece( Piece_t *piece, const int x, const int y );
-int CheckSpecials( Piece_t *piece, const int xdest, const int ydest );
+BYTE MovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest );
+BYTE MovePieceIter( const BYTE *j, const BYTE *k, const BYTE *xdest, const BYTE *ydest, Piece_t *piece );
+void FinalMovePiece( Piece_t *piece, const BYTE *x, const BYTE *y );
 
 #endif

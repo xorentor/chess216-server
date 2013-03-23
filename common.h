@@ -16,11 +16,13 @@
 
 #define		ctrue			1
 #define		cfalse			0
+#define		BYTE			char
 
 #define		F_QUIT			0x0001
 
 #define		MAX_SPECTATORS		4
 #define		MAX_GAMES		256		
+#define		MAX_PIECES		32
 #define		PORTNO			5770
 #define		MAX_THREADS		256
 #define		MAX_CLIENTS		256
@@ -69,6 +71,7 @@ enum {
 	CMD_GAME_JOIN_PARAM_OK,
 	CMD_GAME_JOIN_PARAM_NOK,
 	CMD_GAME_BEGIN_PARAM_OK,
+	CMD_GAME_PARAM_CHECKMATE,
 };
 
 enum
@@ -104,7 +107,7 @@ typedef struct PacketData_s
 
 typedef struct ServerByte_s
 {
-	char byte;
+	char byte0;
 } ServerByte_t;
 
 typedef struct ServerTwoBytes_s
@@ -173,6 +176,7 @@ typedef struct GamePieceMoveSrv_s
 	char pieceId;
 	char xdest;
 	char ydest;
+	char checkMate;
 } GamePieceMoveSrv_t;
 
 typedef struct Game_s
@@ -183,15 +187,15 @@ typedef struct Game_s
 	Player_t *player2;
 	Player_t *spectators[ MAX_SPECTATORS ];
 	Player_t *nextMove;
-	int player1RemTime;
-	int player2RemTime;
+	float player1RemTime;
+	float player2RemTime;
 	int state;
 } Game_t;
 
 typedef struct Info_s
 {
-	int playersCount;	// int despite that this can't be higher than MAX_CLIENTS
-	int gamesCount;		// int despite that this can't be higher than MAX_GAMES
+	BYTE playersCount;	// int despite that this can't be higher than MAX_CLIENTS
+	BYTE gamesCount;		// int despite that this can't be higher than MAX_GAMES
 } Info_t; 
 
 typedef struct CrossThread_s

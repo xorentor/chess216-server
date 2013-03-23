@@ -10,11 +10,9 @@ INLINE ParseAction ParseCmd( const char *cmd )
 		case CMD_LOGIN:
 			return &GameLogin;
 			break;
-		
 		case CMD_GAME_CREATE:
 			return &GameCreateNew;	
 			break;
-
 		case CMD_GAME_JOIN:
 			return &GameJoin;
 			break;
@@ -33,6 +31,8 @@ INLINE ParseAction ParseCmd( const char *cmd )
 void Controller( ClientLocalData_t *cld )
 {
 	Player_t *player;
+	player = NULL;
+
 	void (*action)( ClientLocalData_t*, Player_t* ) = NULL;
 
 	if( ( player = GetPlayer( cld ) ) == NULL ) {
@@ -44,5 +44,7 @@ void Controller( ClientLocalData_t *cld )
 		return;
 	}
 
-	(*action)( cld, player );
+	if( action != NULL ) {
+		(*action)( cld, player );
+	}
 }
