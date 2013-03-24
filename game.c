@@ -7,6 +7,7 @@
 
 void GameGetInitialData( const int *sd, pthread_mutex_t *mutex )
 {
+	// TODO:
 	//short playersCount;
 	// 1. online users
 	//players = GameGetOnlinePlayers( pthread_mutex_t *mutex );
@@ -16,7 +17,7 @@ void GameGetInitialData( const int *sd, pthread_mutex_t *mutex )
 	// 3. 
 }
 
-INLINE void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
+void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 {
 	BYTE r, piece = 0;
 	Game_t *g;	
@@ -92,7 +93,7 @@ INLINE void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 	}
 }
 
-INLINE void GameSit( ClientLocalData_t *cld, Player_t *player )
+void GameSit( ClientLocalData_t *cld, Player_t *player )
 {
 	GameSitData_t *sd;
 	Pieces_t *pieces;
@@ -244,10 +245,6 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 	user = "john";
 	pass = "doe";
 
-#ifdef _DEBUG
-	printf( "user: %s pass: %s \n", ld->username, ld->password );
-#endif
-	
 	if( strlen( ld->username ) < 2 || strlen( ld->password ) < 2 ) {
 
 #ifdef _DEBUG
@@ -290,7 +287,6 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 	GameGetInitialData( &cld->socketDesc, cld->mutex );
 }
 
-//void GameCreateNew( void *data, const int *sd, pthread_mutex_t *mutex, int *threadFlag, Player_t *player )
 void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
 {
 	PacketData_t pd;
@@ -316,16 +312,9 @@ void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
 		return;
 	
 	if( ( g = GameStore( cld, player ) ) == NULL ) {
-		// send response to client
-		/*
-		pd.command = (char )CMD_GAME_CREATE;
-		pd.data = &b;
-		b.byte = (char )CMD_GAME_CREATE_PARAM_NOK;
-		
-		ReplyToPlayer( &pd, sd );
-		*/
+		// TODO: send response to client
 #ifdef _DEBUG
-		LogMessage( LOG_WARNING, "GameStore() failed, MAX_GAMES or malloc" );
+		LogMessage( LOG_WARNING, "GameStore() failed, MAX_GAMES reached" );
 #endif
 		return;
 	}
@@ -335,7 +324,6 @@ void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
 	b.byte0 = (char )CMD_GAME_CREATE_PARAM_OK;
 	b.byte1 = (char )g->gameId;
 		
-//	ReplyToPlayer( &pd, &cld->socketDesc );
 	BroadcastToPlayers( cld, &pd );
 }
 
@@ -370,14 +358,7 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 	for( int i = 1; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId == 0 ) {
 			g = &( cld->cst->games[ i ] );
-			//g = malloc( sizeof( Game_t ) );	
-/*			if( g == NULL ) {
-#ifdef _DEBUG
-				LogMessage( LOG_ERROR, "malloc failed (Game_t)" );
-#endif
-				return NULL;
-			}
-*/			
+
 			// default player state
 			p->state |= PLAYER_CREATED_GAME;
 

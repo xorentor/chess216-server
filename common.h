@@ -12,23 +12,28 @@
 #include <memory.h>
 
 #define 	_DEBUG			1
+#define		_DEBUG_GAME		1
 #define		INLINE			inline
-
+#define		BYTE			char
 #define		ctrue			1
 #define		cfalse			0
-#define		BYTE			char
 
-#define		F_QUIT			0x0001
-
-#define		MAX_SPECTATORS		4
-#define		MAX_GAMES		256		
-#define		MAX_PIECES		32
 #define		PORTNO			5770
+#define		F_QUIT			0x0001
+#define		BUFFER_LEN		0x100
+
+// max
+#define		MAX_SPECTATORS		4
+#define		MAX_GAMES		256
+#define		MAX_PIECES		32
 #define		MAX_THREADS		256
 #define		MAX_CLIENTS		256
+
+// game colours
 #define         COLOR_WHITE             1
 #define         COLOR_BLACK             2
 
+// player state
 #define		PLAYER_LOGGED		0x1
 #define		PLAYER_CREATED_GAME	0x2
 #define		PLAYER_PLAYING		0x4
@@ -46,13 +51,16 @@
 #define		PLAYER_WON		0x4000
 #define		PLAYER_INGAME		0x8000
 
+// game state
 #define		GAME_OPENED		0x1
 #define		GAME_PLAYING		0x2
 #define		GAME_PAUSED		0x4
 #define		GAME_FINISHED		0x8
 #define		GAME_CANCELLED		0x10
 
-#define		BUFFER_LEN		0x100
+#ifndef NULL
+#define 	NULL ((void *)0)
+#endif
 
 // as same as server ***
 enum {
@@ -230,35 +238,5 @@ typedef struct ClientThread_s
 	int *sockfd;
 	CrossThread_t *cst;
 } ClientThread_t;
-
-INLINE int       asm_strcmp( const char *s, const char *d, const int c )
-{
-        int r;
-        __asm__
-        (
-                "testl  %%eax, %%eax;"
-                "jz     .cmpf;"
-                "testl  %%ebx, %%ebx;"
-                "jz     .cmpf;"
-                "mov    %%eax, %%esi;"
-                "mov    %%ebx, %%edi;"
-                "cld;"
-                "repe   cmpsb;"
-                "je     .cmpt;"
-                ".cmpf:;"
-                "movl   $1, %%eax;"
-                "jmp    .cmpend;"
-                ".cmpt:;"
-                "xorl   %%eax, %%eax;"
-                ".cmpend:;"
-                : "=a"(r)
-                : "a"(s), "b"(d), "c"(c)
-        );
-        return r;
-}
-
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
 
 #endif

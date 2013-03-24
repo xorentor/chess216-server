@@ -1,4 +1,5 @@
 #include "common.h"
+#include "memory.h"
 #include "log.h"
 #include "core.h"
 #include "controller.h"
@@ -123,7 +124,7 @@ INLINE const int AddSD( const int *sd )
 
 INLINE void InitDescriptors()
 {
-	memset( descriptors, 0, MAX_CLIENTS * sizeof( int ) );
+	memset( descriptors, 0, sizeof( descriptors ) );
 }
 
 INLINE pthread_t *GetPthread( Thread_t *threads )
@@ -147,7 +148,7 @@ INLINE pthread_t *GetPthread( Thread_t *threads )
 
 void *ServerThread( void *params )
 {
-	int flag;
+	int flag = 0;
 	while( flag != F_QUIT )
 	{
 		//players;
@@ -183,7 +184,6 @@ void *ClientsThread( void *params )
 				continue;
 			}
 
-			printf("newsockfd %d\n", newsockfd );
 			threadParam.threads = ct->threads;
 			threadParam.socketId = &newsockfd;
 			threadParam.cst = ct->cst;
@@ -236,7 +236,7 @@ void Core( int argc, char **argv )
 	pthread_mutex_init( &mutex, NULL );
 	InitDescriptors();
 	memset( (char *)&serv_addr, 0, sizeof( serv_addr ) );
-     	portno = 5770; //atoi( argv[1] );
+     	portno = 5777; //atoi( argv[1] );
      	serv_addr.sin_family = AF_INET;
      	serv_addr.sin_addr.s_addr = INADDR_ANY;
      	serv_addr.sin_port = htons( portno );

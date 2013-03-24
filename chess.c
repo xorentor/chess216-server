@@ -1,4 +1,5 @@
 #include "common.h"
+#include "log.h"
 #include "chess.h"
 
 Move_t lastMove; // FIXME: this is wrong
@@ -108,7 +109,9 @@ INLINE BYTE CheckMove( Piece_t *piece, const BYTE xdest, const BYTE ydest )
 			break;
 
 		default:
-			printf( "not selected\n" );
+#ifdef _DEBUG_GAME
+			LogMessage( LOG_NOTICE, "Unknown piece" );
+#endif
 			return cfalse;
 			break;
 	}
@@ -162,11 +165,9 @@ INLINE BYTE MoveKing( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 
 		for( BYTE i = 1; i <= 2; i++ ) {
 			if( !SquareFree( *x + i, *y ) || SquareChecked( *x + i, *y, &piece->color ) ) {
-				printf( "position checked x %d y %d \n", *x + i, *y  );
 				return cfalse;
 			}
 		}
-		printf( "castle king's side\n" );
 		return ctrue;
 	}
 
@@ -177,12 +178,10 @@ INLINE BYTE MoveKing( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 
 		for( BYTE i = 1; i <= 3; i++ ) {
 			if( !SquareFree( *x - i, *y ) || SquareChecked( *x - i, *y, &piece->color ) ) {
-				printf( "position checked x %d y %d \n", *x - i, *y  );
 				return cfalse;
 			}
 		}
 
-		printf( "castle queen's side\n" );
 		return ctrue;
 	}
 
@@ -229,29 +228,19 @@ INLINE BYTE KingCheckMate( const BYTE color )
 {
 	Piece_t *king;
 
-	if( color == COLOR_WHITE ) {
+	if( color == COLOR_WHITE ) 
 		king = listPieces[ 30 ];
-		printf("white king  \n");
-	}
-	else {
+	else 
 		king = listPieces[ 31 ];
-		printf("black king  \n");
-	}
 
-	if( !KingCheck( &color ) ) {
-		printf("king not checked color: %d \n", color );
+	if( !KingCheck( &color ) ) 
 		return cfalse;
-	}
 
-	printf("king checked 3 \n");
-	
 	if( CheckMove( king, king->xpos - 1, king->ypos - 1 ) ) { 
 		if( !KingCheckSimulate( king, king->xpos - 1, king->ypos - 1 ) ) {
 			return cfalse;
 		}
 	}
-
-	printf("king checked 4 \n");
 
 	if( CheckMove( king, king->xpos, king->ypos - 1 ) ) { 
 		if( !KingCheckSimulate( king, king->xpos, king->ypos - 1 ) ) {
@@ -259,15 +248,11 @@ INLINE BYTE KingCheckMate( const BYTE color )
 		}
 	}
 
-	printf("king checked 5 \n");
-
 	if( CheckMove( king, king->xpos + 1, king->ypos - 1 ) ) { 
 		if( !KingCheckSimulate( king, king->xpos + 1, king->ypos - 1 ) ) {
 			return cfalse;
 		}
 	}
-
-	printf("king checked 6 \n");
 
 	if( CheckMove( king, king->xpos - 1, king->ypos ) ) { 
 		if( !KingCheckSimulate( king, king->xpos - 1, king->ypos ) ) {
@@ -275,15 +260,11 @@ INLINE BYTE KingCheckMate( const BYTE color )
 		}
 	}
 
-	printf("king checked 7 \n");
-
 	if( CheckMove( king, king->xpos + 1, king->ypos ) ) { 
 		if( !KingCheckSimulate( king, king->xpos + 1, king->ypos ) ) {
 			return cfalse;
 		}
 	}
-
-	printf("king checked 8 \n");
 
 	if( CheckMove( king, king->xpos - 1, king->ypos + 1 ) ) { 
 		if( !KingCheckSimulate( king, king->xpos - 1, king->ypos + 1 ) ) {
@@ -291,23 +272,17 @@ INLINE BYTE KingCheckMate( const BYTE color )
 		}
 	}
 
-	printf("king checked 9 \n");
-
 	if( CheckMove( king, king->xpos, king->ypos + 1 ) ) { 
 		if( !KingCheckSimulate( king, king->xpos, king->ypos + 1 ) ) {
 			return cfalse;
 		}
 	}
 
-	printf("king checked 10 \n");
-
 	if( CheckMove( king, king->xpos + 1, king->ypos + 1 ) ) { 
 		if( !KingCheckSimulate( king, king->xpos + 1, king->ypos + 1 ) ) {
 			return cfalse;
 		}
 	}
-
-	printf("king checked 11 \n");
 
 	// if still checked now, we need to:
 	// 1. capture the piece that checks AND do not get checked OR
@@ -323,7 +298,11 @@ INLINE BYTE KingCheckMate( const BYTE color )
 			for( BYTE y = 0; y < 8; y++ ) {
 				if( CheckMove( listPieces[ i ], x, y ) ) {
 					if( !KingCheckSimulate( listPieces[ i ], x, y ) ) {
-						printf( "piece %d can prevent check \n", i );
+#ifdef _DEBUG_GAME
+						char buf[ 0x40 ];
+						sprintf( buf, "KingCheckMate: piece %d can prevent checkmate", i );
+						LogMessage( LOG_NOTICE, buf );
+#endif
 						return cfalse;
 					}
 				}
@@ -439,7 +418,6 @@ INLINE BYTE MovePieceIter( const BYTE *j, const BYTE *k, const BYTE *xdest, cons
 	for( BYTE i = 0; i < MAX_PIECES; i++ ) {		
 		// there is another piece between origin and destination
 		if( listPieces[ i ]->xpos == *j && listPieces[ i ]->ypos == *k && ( *j != *xdest || *k != *ydest ) && piece->ID != listPieces[ i ]->ID && ( listPieces[ i ]->state & PIECE_INPLAY ) ) {
-			printf("obstruction x: %d y: %d\n", *j, *k );
 			return 0; // return cfalse
 		}
 
@@ -721,7 +699,10 @@ INLINE void FinalMovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest
 
 	// turn pawn into queen
 	if( ( piece->skinID == BLACK_PAWN && piece->ypos == 6 && *ydest == 7 ) || ( piece->skinID == WHITE_PAWN  && piece->ypos == 1 && *ydest == 0 ) ) {
-		printf("turn pawn\n");
+#ifdef _DEBUG_GAME
+		LogMessage( LOG_NOTICE, "turn pawn into queen" );
+#endif
+
 		if( piece->skinID == WHITE_PAWN ) {
 			piece->skinID = WHITE_QUEEN;
 		} else if ( piece->skinID == BLACK_PAWN ) {
@@ -734,8 +715,11 @@ INLINE void FinalMovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest
 			continue;
 
 		if( listPieces[ i ]->xpos == *xdest && listPieces[ i ]->ypos == *ydest && listPieces[ i ]->color != piece->color ) {
-			
-			printf( "capture state piece: %d \n", listPieces[ i ]->ID );	
+#ifdef _DEBUG_GAME
+			char buf[ 0x40 ];
+			sprintf( buf, "capture state, piece %d", i );
+			LogMessage( LOG_NOTICE, buf );
+#endif
 			listPieces[ i ]->state ^= PIECE_INPLAY;
 			piece->xpos = *xdest;
 			piece->ypos = *ydest;
@@ -745,7 +729,10 @@ INLINE void FinalMovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest
 		}
 	}	
 
-	printf( "empty square\n" );
+#ifdef _DEBUG_GAME
+	LogMessage( LOG_NOTICE, "Move to empty square" );
+#endif
+
 	piece->xpos = *xdest;
 	piece->ypos = *ydest;
 	piece->state ^= PIECE_ISINITIAL; // FIXME: this is wrong

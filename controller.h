@@ -1,5 +1,5 @@
-#ifndef __PARSE_H_
-#define __PARSE_H_
+#ifndef __CONTROLLER_H_
+#define __CONTROLLER_H_
 
 typedef void (*ParseAction)( ClientLocalData_t*, Player_t* );
 

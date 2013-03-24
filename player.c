@@ -21,7 +21,7 @@ Player_t *GetPlayer( ClientLocalData_t *cld )
 	}
 	
 	if( ( p = StorePlayer( cld ) ) == NULL ) {
-		// send client MAX_CLIENTS reached
+		// TODO: send client MAX_CLIENTS reached
 #ifdef _DEBUG
 		LogMessage( LOG_WARNING, "MAX_CLIENTS reached" );
 #endif
@@ -37,24 +37,11 @@ Player_t *StorePlayer( ClientLocalData_t *cld )
 		if( cld->cst->players[ i ].socketDesc == 0 ) {
 			Player_t *p;
 			p = &( cld->cst->players[ i ] );
-/*
-			p = malloc( sizeof(Player_t) );
-			if( p == NULL ) {
-#ifdef _DEBUG
-				LogMessage( LOG_ERROR, "malloc failed (Player_t)" );
-#endif
-				return NULL;
-			}
-#ifdef _DEBUG
-				LogMessage( LOG_NOTICE, "Player_t stored" );
-#endif
-*/
+
 			p->socketDesc = cld->socketDesc;		// copy this!
 			p->state = 0;
 
-//			cld->cst->players[ i ] = p;
 			( cld->cst->info.playersCount )++;
-//			Broadcast( cld, ++( );
 #ifdef _DEBUG
 			LogMessage( LOG_NOTICE, "Player_t stored" );
 #endif
@@ -65,7 +52,7 @@ Player_t *StorePlayer( ClientLocalData_t *cld )
 	return NULL;
 }
 
-void RemoveGame( ClientLocalData_t *cld, Player_t *p )
+void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 {
 	Game_t *g;
 	int players = 0;
@@ -107,7 +94,7 @@ void RemoveGame( ClientLocalData_t *cld, Player_t *p )
 
 #ifdef _DEBUG
 	char buf[ 0x40 ];
-	sprintf( buf, "RemoveGame: players count: %d", players );
+	sprintf( buf, "RemovePlayerGame: players count: %d", players );
 	LogMessage( LOG_NOTICE, buf );
 #endif
 
@@ -121,7 +108,7 @@ void RemovePlayer( ClientLocalData_t *cld )
 	for( int i = 0; i < MAX_CLIENTS; i++ ) {
 		if( cld->cst->players[ i ].socketDesc == cld->socketDesc ) {
 			// delete game if last player left
-			RemoveGame( cld, &( cld->cst->players[ i ] ) );
+			RemovePlayerGame( cld, &( cld->cst->players[ i ] ) );
 
 			FreePlayer( &cld->cst->players[ i ] );
 
@@ -137,7 +124,5 @@ void RemovePlayer( ClientLocalData_t *cld )
 
 void FreePlayer( Player_t *p )
 {
-//	if( p != NULL)
-//		free( p );
 	memset( p, 0, sizeof( Player_t ) );
 }

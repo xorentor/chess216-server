@@ -1,5 +1,3 @@
-#include "memory.h"
-
 #include "common.h"
 #include "log.h"
 #include "net.h"
@@ -61,7 +59,6 @@ void PacketSend( PacketData_t *pd, const int *sd )
 			break;
 	}
 
-	printf( "WRITE TO SD: %d\n", *sd );
 	n = write( *sd, output, sizeof( output ) );
 }
 

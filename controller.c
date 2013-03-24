@@ -6,7 +6,7 @@
 
 INLINE ParseAction ParseCmd( const char *cmd )
 {
-	switch( (int)*cmd ) {
+	switch( (int )*cmd ) {
 		case CMD_LOGIN:
 			return &GameLogin;
 			break;
@@ -36,7 +36,7 @@ void Controller( ClientLocalData_t *cld )
 	void (*action)( ClientLocalData_t*, Player_t* ) = NULL;
 
 	if( ( player = GetPlayer( cld ) ) == NULL ) {
-		// max players reached or malloc failed
+		// TODO: tell client max players reached
 	}
 
 	if( ( action = ParseCmd( &cld->pd->command ) ) == NULL ) {
@@ -44,7 +44,6 @@ void Controller( ClientLocalData_t *cld )
 		return;
 	}
 
-	if( action != NULL ) {
+	if( action != NULL ) 
 		(*action)( cld, player );
-	}
 }
