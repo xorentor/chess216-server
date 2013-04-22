@@ -1,6 +1,7 @@
 #ifndef __COMMON_H_
 #define __COMMON_H_
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -11,8 +12,8 @@
 #include <pthread.h>
 #include <memory.h>
 
-#define 	_DEBUG			1
-#define		_DEBUG_GAME		1
+#define 	_DEBUG			0
+#define		_DEBUG_GAME		0
 #define		INLINE			inline
 #define		BYTE			char
 #define		ctrue			1
@@ -80,6 +81,8 @@ enum {
 	CMD_GAME_JOIN_PARAM_NOK,
 	CMD_GAME_BEGIN_PARAM_OK,
 	CMD_GAME_PARAM_CHECKMATE,
+        CMD_GAME_PARAM_NEXTWHITE,
+        CMD_GAME_PARAM_NEXTBLACK,
 };
 
 enum
@@ -145,6 +148,15 @@ typedef struct Piece_s
 	int state;
 } Piece_t;
 
+typedef struct Move_s
+{
+	char skinID;
+	char srcX;
+	char srcY;
+	char destX;
+	char destY;
+} Move_t;
+
 typedef Piece_t Pieces_t[ 32 ];
 
 typedef struct JoinData_s
@@ -185,6 +197,7 @@ typedef struct GamePieceMoveSrv_s
 	char xdest;
 	char ydest;
 	char checkMate;
+	char next;
 } GamePieceMoveSrv_t;
 
 typedef struct Game_s

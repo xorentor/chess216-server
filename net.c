@@ -51,6 +51,7 @@ void PacketSend( PacketData_t *pd, const int *sd )
 			memcpy( output + sizeof( pd->command ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->pieceId ), &( ( (GamePieceMoveSrv_t *)pd->data )->xdest ), sizeof( ( (GamePieceMoveSrv_t *)pd->data )->xdest ) );
 			memcpy( output + sizeof( pd->command ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->pieceId ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->xdest ), &( ( (GamePieceMoveSrv_t *)pd->data )->ydest ), sizeof( ( (GamePieceMoveSrv_t *)pd->data )->ydest ) );
 			memcpy( output + sizeof( pd->command ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->pieceId ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->xdest ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->ydest ) , &( ( (GamePieceMoveSrv_t *)pd->data )->checkMate ), sizeof( ( (GamePieceMoveSrv_t *)pd->data )->checkMate ) );
+			memcpy( output + sizeof( pd->command ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->pieceId ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->xdest ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->ydest ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->checkMate ) , &( ( (GamePieceMoveSrv_t *)pd->data )->next ), sizeof( ( (GamePieceMoveSrv_t *)pd->data )->next ) );
 
 			break;
 

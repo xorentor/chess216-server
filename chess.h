@@ -6,15 +6,6 @@
 #define		PIECE_ISINITIAL		0x4
 #define		PIECE_INUSE		0x8
 
-typedef struct Move_s
-{
-	char skinID;
-	char srcX;
-	char srcY;
-	char destX;
-	char destY;
-} Move_t;
-
 BYTE ClientMovePiece( const BYTE *xsrc, const BYTE *ysrc, const BYTE *x, const BYTE *y, BYTE *piece, const BYTE color );
 void InitPieces( Pieces_t *pieces );	
 

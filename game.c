@@ -64,10 +64,13 @@ void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 			ps.xdest = (char )md->xdest;
 			ps.ydest = (char )md->ydest;
 	
-			if( g->player1 == player )	
+			if( g->player1 == player ) {	
 				g->nextMove = g->player2;
-			else
+				ps.next = COLOR_BLACK;
+			} else {
 				g->nextMove = g->player1;
+				ps.next = COLOR_WHITE;
+			}
 
 			BroadcastToGame( g, &pd );
 			break;

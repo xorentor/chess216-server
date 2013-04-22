@@ -14,11 +14,6 @@ INLINE void DeletePthread( Thread_t *threads, const pthread_t *pt )
 {
 	for( int i = 0; i < MAX_THREADS; i++ ) {
 		if( threads[ i ].pthread == *pt ) {
-#ifdef _DEBUG
-			char buf[ 0x40 ];
-			sprintf( buf, "removed thread array index: %d pthreadID: %u", i, (unsigned int)pthread_self() );
-			LogMessage( LOG_NOTICE, buf );
-#endif
 			memset( &(threads[ i ]), 0, sizeof( Thread_t ) );	
 		}
 	}

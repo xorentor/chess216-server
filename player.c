@@ -52,45 +52,68 @@ Player_t *StorePlayer( ClientLocalData_t *cld )
 	return NULL;
 }
 
-void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
+Game_t *FindGameByPlayer( ClientLocalData_t *cld, Player_t *p )
 {
-	Game_t *g;
-	int players = 0;
-	g = NULL;
-
-	for( int i = 0; i < MAX_GAMES; i++ ) {
+	for( int i = 0; i < MAX_GAMES; i++ ) { 
 		if( cld->cst->games[ i ].player1 == p ) {
-			g = &cld->cst->games[ i ];
-			cld->cst->games[ i ].player1 = NULL;
-			break;
+			return &cld->cst->games[ i ];
 		}
-
 		if( cld->cst->games[ i ].player2 == p  ) {
-			g = &cld->cst->games[ i ];
-			cld->cst->games[ i ].player2 = NULL;
-			break;
+			return &cld->cst->games[ i ];
 		}
 
 		for( int j = 0; j < MAX_SPECTATORS; j++ ) {
 			if( cld->cst->games[ i ].spectators[ j ] == p ) {
-				g = &cld->cst->games[ i ];
-				cld->cst->games[ i ].spectators[ j ] = NULL;
-				break;
+				return &cld->cst->games[ i ];
 			}
 		}
 	}
 
-	if( g != NULL ) {
-		if( g->player1 != NULL )
-			players++;
+	return NULL;
+}
 
-		if( g->player2 != NULL )
-			players++;
+BYTE GetPlayersCount( Game_t *g ) {
+	BYTE players = 0;
 
-		for( int j = 0; j < MAX_SPECTATORS; j++ ) 
-			if( g->spectators[ j ] != NULL )
-				players++;
+	assert( g );
+	if( g->player1 != NULL )
+		players++;
+
+	if( g->player2 != NULL )
+		players++;
+
+	for( int j = 0; j < MAX_SPECTATORS; j++ ) 
+		if( g->spectators[ j ] != NULL )
+			players++;
+	
+	return players;
+}
+
+void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
+{
+	Game_t *g = NULL;
+	BYTE players = 0;
+
+	if( ( g = FindGameByPlayer( cld, p ) ) == NULL )
+		return;
+
+	// remove a player from game
+	{ 
+	if( g->player1 == p ) 
+		g->player1 = NULL;
+
+	if( g->player2 == p  ) 
+		g->player2 = NULL;
+
+	for( int j = 0; j < MAX_SPECTATORS; j++ ) {
+		if( g->spectators[ j ] == p ) {
+			g->spectators[ j ] = NULL;
+			break;
+		}
 	}
+	}
+
+	players = GetPlayersCount( g );	
 
 #ifdef _DEBUG
 	char buf[ 0x40 ];
@@ -98,7 +121,8 @@ void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 	LogMessage( LOG_NOTICE, buf );
 #endif
 
-	// no player left?
+	// if no player left, remove game
+	// TODO: tell clients to remove it from list of available games
 	if( players == 0 )
 		memset( g, 0, sizeof( Game_t ) );
 }
@@ -119,7 +143,6 @@ void RemovePlayer( ClientLocalData_t *cld )
 			return;
 		}
 	}
-
 }
 
 void FreePlayer( Player_t *p )
