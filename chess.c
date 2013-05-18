@@ -407,9 +407,6 @@ INLINE BYTE MovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 		}
 	}
 
-	if( pawnFlag )
-		return pawnFlag;
-
 	return ctrue;
 }
 

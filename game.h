@@ -10,4 +10,9 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p );
 Game_t *GameByPlayer( ClientLocalData_t *cld, Player_t *p );
 Pieces_t *GetPieces( ClientLocalData_t *cld );
 
+void UpdateGames( ClientLocalData_t *cld );
+void GameAutoJoin( ClientLocalData_t *cld, Player_t *player, const int *gameId );
+void GameJoinSeatsStatus( ClientLocalData_t *cld, Player_t *player, const int slot );
+void GamePiecesStatus( ClientLocalData_t *cld, Pieces_t *pieces );
+
 #endif

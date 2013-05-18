@@ -1,6 +1,7 @@
 #include "common.h"
 #include "log.h"
 #include "player.h"
+#include "net.h"
 
 Player_t *GetPlayer( ClientLocalData_t *cld )
 {	
@@ -91,11 +92,20 @@ BYTE GetPlayersCount( Game_t *g ) {
 
 void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 {
+	PacketData_t pd;
+	ServerTwoBytes_t b;
 	Game_t *g = NULL;
 	BYTE players = 0;
 
-	if( ( g = FindGameByPlayer( cld, p ) ) == NULL )
+	if( ( g = FindGameByPlayer( cld, p ) ) == NULL ) {
+		printf( "findgamebyplayer null\n" );
 		return;
+	}
+
+	printf("found game %d\n", g->gameId );
+
+	players = GetPlayersCount( g );	
+	printf( "number of players for this game total, before memset0: %d\n", players );
 
 	// remove a player from game
 	{ 
@@ -122,9 +132,18 @@ void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 #endif
 
 	// if no player left, remove game
-	// TODO: tell clients to remove it from list of available games
-	if( players == 0 )
+	if( players == 0 ) {
+		pd.command = (char )CMD_GAME_CREATE;
+		pd.data = &b;
+		b.byte0 = (char )CMD_GAME_CREATE_PARAM_DELETE;
+		b.byte1 = (char )g->gameId;
+	
+		printf("sent game ID: %d\n", (int )b.byte1 );	
+		BroadcastToPlayers( cld, &pd );
+
 		memset( g, 0, sizeof( Game_t ) );
+	} else
+		printf( "number of players for this game total: %d\n", players );
 }
 
 void RemovePlayer( ClientLocalData_t *cld )

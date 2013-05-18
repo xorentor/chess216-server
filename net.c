@@ -7,6 +7,7 @@ void PacketSend( PacketData_t *pd, const int *sd )
 	char output[ BUFFER_LEN ];
 	int n;
 
+	memset( output, 0, sizeof( output ) );
 	memcpy( output, &pd->command, sizeof( pd->command ) );
 
 	// TODO: Add length !!
@@ -54,7 +55,10 @@ void PacketSend( PacketData_t *pd, const int *sd )
 			memcpy( output + sizeof( pd->command ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->pieceId ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->xdest ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->ydest ) + sizeof( ( (GamePieceMoveSrv_t *)pd->data )->checkMate ) , &( ( (GamePieceMoveSrv_t *)pd->data )->next ), sizeof( ( (GamePieceMoveSrv_t *)pd->data )->next ) );
 
 			break;
+		case CMD_GAME_INITIAL_PIECES:
+			memcpy( output + sizeof( pd->command ), (char *)pd->data, sizeof( (char *)pd->data ) );
 
+			break;
 		default:
 			return;
 			break;

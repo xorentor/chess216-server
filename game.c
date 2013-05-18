@@ -5,16 +5,36 @@
 #include "chess.h"
 #include "game.h"
 
-void GameGetInitialData( const int *sd, pthread_mutex_t *mutex )
+void GameGetInitialData( ClientLocalData_t *cld )
 {
 	// TODO:
 	//short playersCount;
 	// 1. online users
 	//players = GameGetOnlinePlayers( pthread_mutex_t *mutex );
+	UpdateGames( cld );
 	
 	// 2. list of available games
-
+	
 	// 3. 
+}
+
+/* send latest games to every clientlist if:
+	3. if player logs in, send him this as well
+*/
+void UpdateGames( ClientLocalData_t *cld ) {
+	PacketData_t pd;
+	ServerTwoBytes_t b;
+
+	for( int i = 0; i < MAX_GAMES; i++ ) {
+		if( cld->cst->games[ i ].gameId != 0 ) {
+			pd.command = (char )CMD_GAME_CREATE;
+			pd.data = &b;
+			b.byte0 = (char )CMD_GAME_CREATE_PARAM_OK;
+			b.byte1 = (char )cld->cst->games[ i ].gameId;
+		
+			ReplyToPlayer( &pd, &cld->socketDesc );
+		}
+	} 
 }
 
 void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
@@ -124,6 +144,7 @@ void GameSit( ClientLocalData_t *cld, Player_t *player )
 #ifdef _DEBUG
 	LogMessage( LOG_NOTICE, "game sit" );
 #endif
+	printf("gamesit: gameId: %d slot: %d", (int )sd->gameId, (int )sd->slot );
 
 //	pthread_mutex_lock( cld->mutex );
 	for( int i = 0; i < MAX_GAMES; i++ ) {
@@ -190,7 +211,7 @@ void GameSit( ClientLocalData_t *cld, Player_t *player )
 	// TODO: respond to client - sit request failed
 }
 
-void GameJoin( ClientLocalData_t *cld, Player_t *player )
+void GameAutoJoin( ClientLocalData_t *cld, Player_t *player, const int *gameId )
 {
 	JoinData_t *jd;
 	jd = cld->pd->data;
@@ -203,16 +224,13 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 	if( player->state & PLAYER_PLAYING )
 		return;
 
-#ifdef _DEBUG
-	LogMessage( LOG_NOTICE, "game join" );
-#endif
-
-//	pthread_mutex_lock( cld->mutex );
-	for( int i = 0; i < MAX_GAMES; i++ ) {
+	for( int i = 1; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId != 0 ) {
-			if( cld->cst->games[ i ].gameId == (int )jd->gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
+			if( cld->cst->games[ i ].gameId == *gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
 				for( int k = 0; k < MAX_SPECTATORS; k++ ) {
 					if( cld->cst->games[ i ].spectators[ k ] == NULL ) {
+
+						printf( "game join OK, reply now, player as spectator\n" );
 						cld->cst->games[ i ].spectators[ k ] = player;
 						player->state |= PLAYER_INGAME;
 						player->state |= PLAYER_SPECTATOR;
@@ -236,6 +254,116 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 	// TODO: game couldn't be found, respond to client
 }
 
+void GameJoin( ClientLocalData_t *cld, Player_t *player )
+{
+	JoinData_t *jd;
+	jd = cld->pd->data;
+	PacketData_t pd;
+	ServerTwoBytes_t b;
+
+	if( ( player->state & PLAYER_LOGGED ) != PLAYER_LOGGED ) 
+		return;
+
+	if( player->state & PLAYER_PLAYING )
+		return;
+
+#ifdef _DEBUG
+	LogMessage( LOG_NOTICE, "game join" );
+#endif
+
+	printf( "gameId: %d\n", (int )jd->gameId );
+
+//	pthread_mutex_lock( cld->mutex );
+	for( int i = 1; i < MAX_GAMES; i++ ) {
+		if( cld->cst->games[ i ].gameId != 0 ) {
+			if( cld->cst->games[ i ].gameId == (int )jd->gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
+				for( int k = 0; k < MAX_SPECTATORS; k++ ) {
+					if( cld->cst->games[ i ].spectators[ k ] == NULL ) {
+
+						printf( "game join OK, reply now" );
+						cld->cst->games[ i ].spectators[ k ] = player;
+						player->state |= PLAYER_INGAME;
+						player->state |= PLAYER_SPECTATOR;
+
+						pd.command = (char )CMD_GAME_JOIN;
+						pd.data = &b;
+						b.byte0 = (char )CMD_GAME_JOIN_PARAM_OK;
+						b.byte1 = (char )cld->cst->games[ i ].gameId;
+		
+						ReplyToPlayer( &pd, &cld->socketDesc );
+
+						if( cld->cst->games[ i ].player1 != NULL ) 
+							GameJoinSeatsStatus( cld, cld->cst->games[ i ].player1, COLOR_WHITE );
+						if( cld->cst->games[ i ].player2 != NULL ) 
+							GameJoinSeatsStatus( cld, cld->cst->games[ i ].player2, COLOR_BLACK );
+
+						if( cld->cst->games[ i ].listPieces != NULL )
+							GamePiecesStatus( cld, cld->cst->games[ i ].listPieces );
+
+#ifdef _DEBUG
+						char buf[ 0x40 ];
+						sprintf( buf, "GameSit: listPieces: %p", cld->cst->games[ i ].listPieces );
+						LogMessage( LOG_NOTICE, buf );
+#endif
+						break;
+					}
+				}
+				break;
+			}	
+		}
+	}
+//	pthread_mutex_unlock( cld->mutex );
+
+	// TODO: game couldn't be found, respond to client
+}
+
+void GamePiecesStatus( ClientLocalData_t *cld, Pieces_t *pieces )
+{
+	PacketData_t pd;
+	char b[ 225 ];
+	int index = 0;
+
+	memset( &b, 0, sizeof( b ) );
+
+	pd.command = (char )CMD_GAME_INITIAL_PIECES;
+	pd.data = &b;
+
+	for( int i = 0; i < 32; i++ ) {
+		b[ ++index ] = pieces[ i ]->xpos;
+		b[ ++index ] = pieces[ i ]->ypos;
+		b[ ++index ] = pieces[ i ]->ID;
+		b[ ++index ] = pieces[ i ]->skinID;
+		b[ ++index ] = pieces[ i ]->state;
+
+//		printf("xpos: %d ypos: %d id: %d skinID %d inPlay: %d", b[ index-5 ], b[ index-4 ],b[ index-3 ],b[ index-2 ],b[ index-1 ] );
+	
+	}
+
+	index = 0;
+	for( int i = 0; i < 32; i++ ) {
+		printf("xpos: %d ypos: %d id: %d skinID %d inPlay: %d\n", b[ index++ ],  b[ index++ ],  b[ index++ ],  b[ index++ ],  b[ index++ ] );
+	}
+
+	return;
+
+	ReplyToPlayer( &pd, &cld->socketDesc );
+}
+
+void GameJoinSeatsStatus( ClientLocalData_t *cld, Player_t *player, const int slot )
+{
+	PacketData_t pd;
+	GameSitServerData_t b;
+
+	memset( &b, 0, sizeof( b ) );
+
+	pd.command = (char )CMD_GAME_SIT;
+	pd.data = &b;
+	memcpy( &b.username, &player->username, strlen( player->username ) );
+	b.slot = slot;
+
+	ReplyToPlayer( &pd, &cld->socketDesc );
+}
+
 void GameLogin( ClientLocalData_t *cld, Player_t *player )
 {
 	LoginData_t *ld;
@@ -256,6 +384,9 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 #endif
 		return;
 	}
+
+	printf("username: '%s'\n", ld->username);
+	printf("password: '%s'\n", ld->password);
 
 	if( strcmp( ld->username, user ) != 0 || strcmp( ld->password, pass ) != 0 ) {
 
@@ -287,7 +418,7 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 	ReplyToPlayer( &pd, &cld->socketDesc );
 
 	// when a login is successful, update client
-	GameGetInitialData( &cld->socketDesc, cld->mutex );
+	GameGetInitialData( cld );
 }
 
 void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
@@ -328,6 +459,9 @@ void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
 	b.byte1 = (char )g->gameId;
 		
 	BroadcastToPlayers( cld, &pd );
+
+	// immediately join
+	GameAutoJoin( cld, player, &g->gameId );
 }
 
 Game_t *GameByPlayer( ClientLocalData_t *cld, Player_t *p )
@@ -367,6 +501,7 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 
 			// default game state
 			g->gameId = i;
+			printf("new game ID: %d\n", g->gameId );
 			g->player1RemTime = 10.0f;
 			g->player2RemTime = 10.0f;
 			g->state |= GAME_OPENED;

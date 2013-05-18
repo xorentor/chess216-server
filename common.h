@@ -70,6 +70,7 @@ enum {
 	CMD_GAME_JOIN,
 	CMD_GAME_SIT,
         CMD_GAME_MOVEPIECE,
+	CMD_GAME_INITIAL_PIECES,
 };      
                                           
 enum {
@@ -83,6 +84,7 @@ enum {
 	CMD_GAME_PARAM_CHECKMATE,
         CMD_GAME_PARAM_NEXTWHITE,
         CMD_GAME_PARAM_NEXTBLACK,
+	CMD_GAME_CREATE_PARAM_DELETE,
 };
 
 enum
@@ -145,7 +147,7 @@ typedef struct Piece_s
 	char ID;
 	char skinID;
 	char color;
-	int state;
+	char state;
 } Piece_t;
 
 typedef struct Move_s
