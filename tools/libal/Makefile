@@ -1,5 +1,5 @@
 all:
-	cc -O2 -Wall -c libal.c
+	cc -m32 -O2 -Wall -c libal.c
 	ar -cvq ./lib/libal.a libal.o
 
 clean:
