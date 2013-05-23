@@ -56,7 +56,7 @@ void PacketSend( PacketData_t *pd, const int *sd )
 
 			break;
 		case CMD_GAME_INITIAL_PIECES:
-			memcpy( output + sizeof( pd->command ), (char *)pd->data, sizeof( (char *)pd->data ) );
+			memcpy( output + sizeof( pd->command ), (char *)pd->data, 225 );
 
 			break;
 		default:
@@ -97,7 +97,8 @@ void BroadcastToGame( Game_t *game, PacketData_t *pd )
 #endif
 	}
 	
-	for( int i = 0; i < MAX_SPECTATORS; i++ ) {
+	int i;
+	for( i = 0; i < MAX_SPECTATORS; i++ ) {
 		if( game->spectators[ i ] != NULL ) {
 			PacketSend( pd, &game->spectators[ i ]->socketDesc );
 #ifdef _DEBUG
@@ -113,8 +114,8 @@ void BroadcastToGame( Game_t *game, PacketData_t *pd )
 void BroadcastToPlayers( ClientLocalData_t *cld, PacketData_t *pd )
 {
 	//pthread_mutex_lock( cld->mutex );
-
-	for( int i = 0; i < MAX_CLIENTS; i++ ) {
+	int i;
+	for( i = 0; i < MAX_CLIENTS; i++ ) {
 		if( cld->cst->players[ i ].socketDesc != 0 ) {
 #ifdef _DEBUG
 			char buf[ 0x40 ];

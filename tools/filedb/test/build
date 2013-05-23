@@ -1,0 +1,2 @@
+rm test
+gcc -O2 -std=c99 *.c -lcrypto -L../lib/ -L../libal/lib/ -lal -lfiledb -o test -lpthread

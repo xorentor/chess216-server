@@ -1,0 +1,8 @@
+#!bin/sh
+#
+# filedb
+cp tools/filedb/include/filedb.h ./include/
+cp tools/filedb/lib/* ./lib/
+# libal
+#cp tools/libal/include/* ./include/
+cp tools/libal/lib/* ./lib/ 

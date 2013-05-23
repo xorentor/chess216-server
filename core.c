@@ -12,7 +12,8 @@ int descriptors[ MAX_CLIENTS ];
 
 INLINE void DeletePthread( Thread_t *threads, const pthread_t *pt )
 {
-	for( int i = 0; i < MAX_THREADS; i++ ) {
+	int i;
+	for( i = 0; i < MAX_THREADS; i++ ) {
 		if( threads[ i ].pthread == *pt ) {
 			memset( &(threads[ i ]), 0, sizeof( Thread_t ) );	
 		}
@@ -53,9 +54,9 @@ void *ClientInit( void *params )
 		buffLen = read( data.socketDesc, readBuffer, BUFFER_LEN );
 		if( buffLen <= 0 ) {
 #ifdef _DEBUG	
-		char buf[ 0x40 ];
-		sprintf( buf, "thread: %u quitting...", (unsigned int)pthread_self() );
-		LogMessage( LOG_NOTICE, buf );
+			char buf[ 0x40 ];
+			sprintf( buf, "thread: %u quitting...", (unsigned int)pthread_self() );
+			LogMessage( LOG_NOTICE, buf );
 #endif
 			quitFlag |= F_QUIT;
 			continue;
@@ -72,6 +73,8 @@ void *ClientInit( void *params )
 
 		data.pd = &pd;
 		Controller( &data );
+		
+		usleep( 100000 );
 	}
 	
 	pthread_mutex_lock( &mutex );
@@ -87,7 +90,8 @@ void *ClientInit( void *params )
 INLINE void DeleteSD( const int *sd )
 {
 	// TODO: this might cause latency issues as number of clients increases
-	for( int i = 0; i < MAX_CLIENTS; i++ ) {
+	int i;
+	for( i = 0; i < MAX_CLIENTS; i++ ) {
 		if( descriptors[ i ] == *sd ) {
 #ifdef _DEBUG
 			char buf[ 0x40 ];
@@ -103,7 +107,8 @@ INLINE void DeleteSD( const int *sd )
 INLINE const int AddSD( const int *sd )
 {
 	// TODO: this might cause latency issues as number of clients increases
-	for( int i = 0; i < MAX_CLIENTS; i++ ) {
+	int i;
+	for( i = 0; i < MAX_CLIENTS; i++ ) {
 		if( descriptors[ i ] < 1 ) {
 #ifdef _DEBUG
 			char buf[ 0x40 ];
@@ -124,7 +129,8 @@ INLINE void InitDescriptors()
 
 INLINE pthread_t *GetPthread( Thread_t *threads )
 {
-	for( int i = 0; i < MAX_THREADS; i++ ) {
+	int i;
+	for( i = 0; i < MAX_THREADS; i++ ) {
 		if( threads[ i ].inuse != 1 ) {
 #ifdef	_DEBUG
 			char buf[ 0x20 ];

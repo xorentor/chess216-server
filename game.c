@@ -4,6 +4,7 @@
 #include "net.h"
 #include "chess.h"
 #include "game.h"
+#include "./include/filedb.h"
 
 void GameGetInitialData( ClientLocalData_t *cld )
 {
@@ -25,7 +26,8 @@ void UpdateGames( ClientLocalData_t *cld ) {
 	PacketData_t pd;
 	ServerTwoBytes_t b;
 
-	for( int i = 0; i < MAX_GAMES; i++ ) {
+	int i;
+	for( i = 0; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId != 0 ) {
 			pd.command = (char )CMD_GAME_CREATE;
 			pd.data = &b;
@@ -147,11 +149,12 @@ void GameSit( ClientLocalData_t *cld, Player_t *player )
 	printf("gamesit: gameId: %d slot: %d", (int )sd->gameId, (int )sd->slot );
 
 //	pthread_mutex_lock( cld->mutex );
-	for( int i = 0; i < MAX_GAMES; i++ ) {
+	int i, k;
+	for( i = 0; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId != 0 ) {
 			if( cld->cst->games[ i ].gameId == (int )sd->gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
 				if( ( cld->cst->games[ i ].player1 == NULL && (int )sd->slot == COLOR_WHITE ) || ( cld->cst->games[ i ].player2 == NULL && (int )sd->slot == COLOR_BLACK ) ) {
-					for( int k = 0; k < MAX_SPECTATORS; k++ ) {
+					for( k = 0; k < MAX_SPECTATORS; k++ ) {
 						if( cld->cst->games[ i ].spectators[ k ] == player ) {
 							cld->cst->games[ i ].spectators[ k ] = NULL;
 							player->state ^= PLAYER_SPECTATOR;
@@ -223,11 +226,12 @@ void GameAutoJoin( ClientLocalData_t *cld, Player_t *player, const int *gameId )
 
 	if( player->state & PLAYER_PLAYING )
 		return;
-
-	for( int i = 1; i < MAX_GAMES; i++ ) {
+	
+	int i, k;
+	for( i = 1; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId != 0 ) {
 			if( cld->cst->games[ i ].gameId == *gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
-				for( int k = 0; k < MAX_SPECTATORS; k++ ) {
+				for( k = 0; k < MAX_SPECTATORS; k++ ) {
 					if( cld->cst->games[ i ].spectators[ k ] == NULL ) {
 
 						printf( "game join OK, reply now, player as spectator\n" );
@@ -274,10 +278,11 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 	printf( "gameId: %d\n", (int )jd->gameId );
 
 //	pthread_mutex_lock( cld->mutex );
-	for( int i = 1; i < MAX_GAMES; i++ ) {
+	int i, k;
+	for( i = 1; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId != 0 ) {
 			if( cld->cst->games[ i ].gameId == (int )jd->gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
-				for( int k = 0; k < MAX_SPECTATORS; k++ ) {
+				for( k = 0; k < MAX_SPECTATORS; k++ ) {
 					if( cld->cst->games[ i ].spectators[ k ] == NULL ) {
 
 						printf( "game join OK, reply now" );
@@ -328,23 +333,14 @@ void GamePiecesStatus( ClientLocalData_t *cld, Pieces_t *pieces )
 	pd.command = (char )CMD_GAME_INITIAL_PIECES;
 	pd.data = &b;
 
-	for( int i = 0; i < 32; i++ ) {
-		b[ ++index ] = pieces[ i ]->xpos;
-		b[ ++index ] = pieces[ i ]->ypos;
-		b[ ++index ] = pieces[ i ]->ID;
-		b[ ++index ] = pieces[ i ]->skinID;
-		b[ ++index ] = pieces[ i ]->state;
-
-//		printf("xpos: %d ypos: %d id: %d skinID %d inPlay: %d", b[ index-5 ], b[ index-4 ],b[ index-3 ],b[ index-2 ],b[ index-1 ] );
-	
+	int i;
+	for( i = 0; i < 32; i++ ) {
+		memcpy( &b[ index++ ], &pieces[ i ]->xpos, sizeof( char ) );
+		memcpy( &b[ index++ ], &pieces[ i ]->ypos, sizeof( char ) );
+		memcpy( &b[ index++ ], &pieces[ i ]->ID, sizeof( char ) );
+		memcpy( &b[ index++ ], &pieces[ i ]->skinID, sizeof( char ) );
+		memcpy( &b[ index++ ], &pieces[ i ]->state, sizeof( char ) );
 	}
-
-	index = 0;
-	for( int i = 0; i < 32; i++ ) {
-		printf("xpos: %d ypos: %d id: %d skinID %d inPlay: %d\n", b[ index++ ],  b[ index++ ],  b[ index++ ],  b[ index++ ],  b[ index++ ] );
-	}
-
-	return;
 
 	ReplyToPlayer( &pd, &cld->socketDesc );
 }
@@ -372,10 +368,11 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 	ServerByte_t b;
 	
 	// temp
+	/*
 	const char *user, *pass;
 	user = "john";
 	pass = "doe";
-
+	*/
 	if( strlen( ld->username ) < 2 || strlen( ld->password ) < 2 ) {
 
 #ifdef _DEBUG
@@ -385,10 +382,7 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 		return;
 	}
 
-	printf("username: '%s'\n", ld->username);
-	printf("password: '%s'\n", ld->password);
-
-	if( strcmp( ld->username, user ) != 0 || strcmp( ld->password, pass ) != 0 ) {
+	if( verifyUser( ld->username, ld->password ) != 0 ) {
 
 #ifdef _DEBUG
 		// send response to client as well
@@ -469,8 +463,8 @@ Game_t *GameByPlayer( ClientLocalData_t *cld, Player_t *p )
 //	pthread_mutex_lock( cld->mutex );
 	if( p == NULL )
 		return NULL;
-
-	for( int i = 0; i < MAX_GAMES; i++ ) {
+	int i;
+	for( i = 0; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId != 0 ) {
 			if( cld->cst->games[ i ].player1 == p || cld->cst->games[ i ].player2 == p ) {
 				//pthread_mutex_unlock( cld->mutex );
@@ -492,7 +486,8 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 	
 //	pthread_mutex_lock( cld->mutex );
 
-	for( int i = 1; i < MAX_GAMES; i++ ) {
+	int i;
+	for( i = 1; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId == 0 ) {
 			g = &( cld->cst->games[ i ] );
 
@@ -518,7 +513,8 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 
 Pieces_t *GetPieces( ClientLocalData_t *cld )
 {
-	for( int i = 0; i < MAX_GAMES; i++ ) {
+	int i;
+	for( i = 0; i < MAX_GAMES; i++ ) {
 		if( !( cld->cst->pieces[ i ][ 0 ].state & PIECE_INUSE ) ) {
 			 return &( cld->cst->pieces[ i ] );
 		}

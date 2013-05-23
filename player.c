@@ -10,7 +10,8 @@ Player_t *GetPlayer( ClientLocalData_t *cld )
 	
 	Player_t *p;
 
-	for( int i = 0; i < MAX_CLIENTS; i++ ) {
+	int i;
+	for( i = 0; i < MAX_CLIENTS; i++ ) {
 		if( cld->cst->players[ i ].socketDesc != 0 ) {
 			if( cld->cst->players[ i ].socketDesc == cld->socketDesc ) {
 #ifdef _DEBUG
@@ -34,7 +35,8 @@ Player_t *GetPlayer( ClientLocalData_t *cld )
 
 Player_t *StorePlayer( ClientLocalData_t *cld )
 {
-	for( int i = 0; i < MAX_CLIENTS; i++ ) {
+	int i;
+	for( i = 0; i < MAX_CLIENTS; i++ ) {
 		if( cld->cst->players[ i ].socketDesc == 0 ) {
 			Player_t *p;
 			p = &( cld->cst->players[ i ] );
@@ -55,7 +57,8 @@ Player_t *StorePlayer( ClientLocalData_t *cld )
 
 Game_t *FindGameByPlayer( ClientLocalData_t *cld, Player_t *p )
 {
-	for( int i = 0; i < MAX_GAMES; i++ ) { 
+	int i, j;
+	for( i = 0; i < MAX_GAMES; i++ ) { 
 		if( cld->cst->games[ i ].player1 == p ) {
 			return &cld->cst->games[ i ];
 		}
@@ -63,7 +66,7 @@ Game_t *FindGameByPlayer( ClientLocalData_t *cld, Player_t *p )
 			return &cld->cst->games[ i ];
 		}
 
-		for( int j = 0; j < MAX_SPECTATORS; j++ ) {
+		for( j = 0; j < MAX_SPECTATORS; j++ ) {
 			if( cld->cst->games[ i ].spectators[ j ] == p ) {
 				return &cld->cst->games[ i ];
 			}
@@ -83,7 +86,8 @@ BYTE GetPlayersCount( Game_t *g ) {
 	if( g->player2 != NULL )
 		players++;
 
-	for( int j = 0; j < MAX_SPECTATORS; j++ ) 
+	int j;
+	for( j = 0; j < MAX_SPECTATORS; j++ ) 
 		if( g->spectators[ j ] != NULL )
 			players++;
 	
@@ -115,7 +119,8 @@ void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 	if( g->player2 == p  ) 
 		g->player2 = NULL;
 
-	for( int j = 0; j < MAX_SPECTATORS; j++ ) {
+	int j;
+	for( j = 0; j < MAX_SPECTATORS; j++ ) {
 		if( g->spectators[ j ] == p ) {
 			g->spectators[ j ] = NULL;
 			break;
@@ -148,7 +153,8 @@ void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 
 void RemovePlayer( ClientLocalData_t *cld )
 {
-	for( int i = 0; i < MAX_CLIENTS; i++ ) {
+	int i;
+	for( i = 0; i < MAX_CLIENTS; i++ ) {
 		if( cld->cst->players[ i ].socketDesc == cld->socketDesc ) {
 			// delete game if last player left
 			RemovePlayerGame( cld, &( cld->cst->players[ i ] ) );

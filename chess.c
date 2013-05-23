@@ -119,7 +119,9 @@ INLINE BYTE CheckMove( Piece_t *piece, const BYTE xdest, const BYTE ydest )
 
 INLINE BYTE SquareFree( const BYTE x, const BYTE y )
 {
-	for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+	BYTE i;
+
+	for( i = 0; i < MAX_PIECES; i++ ) {
 		if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
 			continue;
 
@@ -132,7 +134,8 @@ INLINE BYTE SquareFree( const BYTE x, const BYTE y )
 
 INLINE BYTE SquareChecked( const BYTE x, const BYTE y, const BYTE *color )
 {
-	for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+	BYTE i;
+	for( i = 0; i < MAX_PIECES; i++ ) {
 		if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
 			continue;
 
@@ -163,7 +166,8 @@ INLINE BYTE MoveKing( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 		if( SquareChecked( *x, *y, &piece->color ) )
 			return cfalse;
 
-		for( BYTE i = 1; i <= 2; i++ ) {
+		BYTE i;
+		for( i = 1; i <= 2; i++ ) {
 			if( !SquareFree( *x + i, *y ) || SquareChecked( *x + i, *y, &piece->color ) ) {
 				return cfalse;
 			}
@@ -176,7 +180,8 @@ INLINE BYTE MoveKing( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 		if( SquareChecked( *x, *y, &piece->color ) )
 			return cfalse;
 
-		for( BYTE i = 1; i <= 3; i++ ) {
+		BYTE i;
+		for( i = 1; i <= 3; i++ ) {
 			if( !SquareFree( *x - i, *y ) || SquareChecked( *x - i, *y, &piece->color ) ) {
 				return cfalse;
 			}
@@ -191,9 +196,9 @@ INLINE BYTE MoveKing( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 INLINE BYTE KingCheck( const BYTE *color )
 {
 	Piece_t *king;
-
+	BYTE i;
 	// get king of the same colour
-	for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+	for( i = 0; i < MAX_PIECES; i++ ) {
 		if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
 			continue;
 
@@ -209,7 +214,7 @@ INLINE BYTE KingCheck( const BYTE *color )
 	}
 
 	// see if enemy pieces can reach king
-	for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+	for( i = 0; i < MAX_PIECES; i++ ) {
 		if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
 			continue;
 		
@@ -287,15 +292,16 @@ INLINE BYTE KingCheckMate( const BYTE color )
 	// if still checked now, we need to:
 	// 1. capture the piece that checks AND do not get checked OR
 	// 2. move to the square that will block checking AND do not get checked by other piece
-	for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+	BYTE i, x, y;
+	for( i = 0; i < MAX_PIECES; i++ ) {
 		if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
 			continue;
 
 		if( listPieces[ i ]->color != color )
 			continue;
 
-		for( BYTE x = 0; x < 8; x++ ) {
-			for( BYTE y = 0; y < 8; y++ ) {
+		for( x = 0; x < 8; x++ ) {
+			for( y = 0; y < 8; y++ ) {
 				if( CheckMove( listPieces[ i ], x, y ) ) {
 					if( !KingCheckSimulate( listPieces[ i ], x, y ) ) {
 #ifdef _DEBUG_GAME
@@ -322,7 +328,8 @@ INLINE BYTE KingCheckSimulate( Piece_t *piece, const BYTE xdest, const BYTE ydes
 	ty = piece->ypos;
 
 	// capture piece temporarily
-	for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+	BYTE i;
+	for( i = 0; i < MAX_PIECES; i++ ) {
 		if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
 			continue;
 
@@ -355,8 +362,9 @@ INLINE BYTE KingCheckSimulate( Piece_t *piece, const BYTE xdest, const BYTE ydes
 INLINE BYTE MovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 {
 	BYTE pawnFlag = cfalse;
+	BYTE i;
 
-	for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+	for( i = 0; i < MAX_PIECES; i++ ) {
 		// inplay only
 		if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
 			continue;
@@ -388,7 +396,8 @@ INLINE BYTE MovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 
 	// pawn initial move by 2
 	if( ( piece->skinID == BLACK_PAWN && *ydest == piece->ypos + 2 ) || ( piece->skinID == WHITE_PAWN && *ydest == piece->ypos - 2 ) ) {
-		for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+		BYTE i;
+		for( i = 0; i < MAX_PIECES; i++ ) {
 			// inplay only
 			if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
 				continue;
@@ -412,7 +421,8 @@ INLINE BYTE MovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 
 INLINE BYTE MovePieceIter( const BYTE *j, const BYTE *k, const BYTE *xdest, const BYTE *ydest, Piece_t *piece )
 {
-	for( BYTE i = 0; i < MAX_PIECES; i++ ) {		
+	BYTE i;
+	for( i = 0; i < MAX_PIECES; i++ ) {		
 		// there is another piece between origin and destination
 		if( listPieces[ i ]->xpos == *j && listPieces[ i ]->ypos == *k && ( *j != *xdest || *k != *ydest ) && piece->ID != listPieces[ i ]->ID && ( listPieces[ i ]->state & PIECE_INPLAY ) ) {
 			return 0; // return cfalse
@@ -644,7 +654,8 @@ INLINE BYTE EnPassant( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 INLINE void FinalMovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 {
 	if( EnPassant( piece, xdest, ydest ) ) {
-		for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+		BYTE i;
+		for( i = 0; i < MAX_PIECES; i++ ) {
 			if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
 				continue;
 
@@ -707,7 +718,8 @@ INLINE void FinalMovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest
 		}
 	}
 
-	for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+	BYTE i;
+	for( i = 0; i < MAX_PIECES; i++ ) {
 		if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
 			continue;
 
@@ -737,7 +749,8 @@ INLINE void FinalMovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest
 
 INLINE BYTE ClientMovePiece( const BYTE *xsrc, const BYTE *ysrc, const BYTE *x, const BYTE *y, BYTE *piece, const BYTE color )
 {
-	for( BYTE i = 0; i < MAX_PIECES; i++ ) {
+	BYTE i;
+	for( i = 0; i < MAX_PIECES; i++ ) {
 		if( listPieces[ i ]->xpos == *xsrc && listPieces[ i ]->ypos == *ysrc && ( listPieces[ i ]->state & PIECE_INPLAY ) && listPieces[ i ]->color == color ) {
 			if( CheckMove( listPieces[ i ], *x, *y ) ) {
 				if( !KingCheckSimulate( listPieces[ i ], *x, *y ) ) {
