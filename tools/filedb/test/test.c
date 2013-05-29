@@ -3,12 +3,12 @@
 #include <stdint.h>
 #include <gcrypt.h>
 
-#include "../libal/include/libal.h"
+#include "../../libal/include/libal.h"
 #include "../include/filedb.h"
 
 int main() 
 {
-	if( createUser( "mark", "doe" ) != 0 )
+	if( createUser( "fred", "doe" ) != 0 )
 		printf( "createUser() failed.\n" );
 
 	/*	

@@ -10,6 +10,8 @@ void PacketSend( PacketData_t *pd, const int *sd )
 	memset( output, 0, sizeof( output ) );
 	memcpy( output, &pd->command, sizeof( pd->command ) );
 
+	printf( "server command: %d\n", (int )pd->command );
+
 	// TODO: Add length !!
 	switch( (int) pd->command ) {
 		case CMD_LOGIN:
@@ -59,6 +61,13 @@ void PacketSend( PacketData_t *pd, const int *sd )
 			memcpy( output + sizeof( pd->command ), (char *)pd->data, 225 );
 
 			break;
+		case CMD_GAME_STAND:
+#ifdef _DEBUG
+			LogMessage( LOG_NOTICE, "server reply: game stand" );
+#endif
+			memcpy( output + sizeof( pd->command ), (char *)pd->data, sizeof( GameSitServerData_t ) );
+			break;
+
 		default:
 			return;
 			break;
@@ -102,7 +111,9 @@ void BroadcastToGame( Game_t *game, PacketData_t *pd )
 		if( game->spectators[ i ] != NULL ) {
 			PacketSend( pd, &game->spectators[ i ]->socketDesc );
 #ifdef _DEBUG
-		LogMessage( LOG_NOTICE, "boardcastGames: spectator exists" );
+		char buf[ 0x40 ];
+		sprintf( buf, "broadcastGames: spectator exists: %d\n", i );
+		LogMessage( LOG_NOTICE, buf );
 #endif
 		}
 	}

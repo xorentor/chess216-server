@@ -71,6 +71,7 @@ enum {
 	CMD_GAME_SIT,
         CMD_GAME_MOVEPIECE,
 	CMD_GAME_INITIAL_PIECES,
+	CMD_GAME_STAND,
 };      
                                           
 enum {
@@ -85,6 +86,8 @@ enum {
         CMD_GAME_PARAM_NEXTWHITE,
         CMD_GAME_PARAM_NEXTBLACK,
 	CMD_GAME_CREATE_PARAM_DELETE,
+        CMD_GAME_STAND_PARAM_OK,
+        CMD_GAME_STAND_PARAM_NOK,
 };
 
 enum
@@ -180,6 +183,18 @@ typedef struct GameSitServerData_s
         char username[ 32 ];
 	char gameBegin;
 } GameSitServerData_t;  
+
+typedef struct GameStandServerData_s
+{                  
+	char param;     
+        char slot;
+} GameStandServerData_t;  
+
+typedef struct GameStandData_s
+{
+        char gameId;
+        char slot;
+} GameStandData_t;
 
 typedef struct GameSitData_s
 {

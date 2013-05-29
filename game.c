@@ -118,6 +118,69 @@ void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 	}
 }
 
+void GameStand( ClientLocalData_t *cld, Player_t *player )
+{
+	GameStandData_t *sd;
+	sd = cld->pd->data;
+	PacketData_t pd;
+	GameStandServerData_t b;
+
+	memset( &b, 0, sizeof( b ) );
+
+	if( ( player->state & PLAYER_LOGGED ) != PLAYER_LOGGED ) {
+#ifdef _DEBUG
+	LogMessage( LOG_NOTICE, "Player not logged" );
+#endif
+
+		return;
+	}
+
+	printf("gamestand\n");
+
+	int i, k;
+	for( i = 0; i < MAX_GAMES; i++ ) {
+		if( cld->cst->games[ i ].gameId != 0 ) {
+			if( cld->cst->games[ i ].gameId == (int )sd->gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
+			// player cannot stand if game is already being played
+			if( cld->cst->games[ i ].state & GAME_PLAYING )
+				return;
+
+				if( ( cld->cst->games[ i ].player1 != NULL && (int )sd->slot == COLOR_WHITE ) || ( cld->cst->games[ i ].player2 != NULL && (int )sd->slot == COLOR_BLACK ) ) {
+					if( (int )sd->slot == COLOR_WHITE ) {
+#ifdef _DEBUG
+						LogMessage( LOG_NOTICE, "GameSit: player1 stand" );
+#endif
+						cld->cst->games[ i ].player1 = NULL;
+					}
+					else if( (int )sd->slot == COLOR_BLACK ) {
+#ifdef _DEBUG
+						LogMessage( LOG_NOTICE, "GameSit: player2 stand" );
+#endif
+						cld->cst->games[ i ].player2 = NULL;
+					}
+
+					player->state ^= PLAYER_PLAYING;
+
+					for( k = 0; k < MAX_SPECTATORS; k++ ) {
+						if( cld->cst->games[ i ].spectators[ k ] == NULL ) {
+							cld->cst->games[ i ].spectators[ k ] = player;
+							break; 
+						}
+					}
+
+					pd.command = (char )CMD_GAME_STAND;
+					pd.data = &b;
+					b.param = (char )CMD_GAME_STAND_PARAM_OK;
+					b.slot = (char )sd->slot;
+
+					BroadcastToGame( &cld->cst->games[ i ], &pd );
+					break;
+				}
+			}	
+		}
+	}
+}
+
 void GameSit( ClientLocalData_t *cld, Player_t *player )
 {
 	GameSitData_t *sd;
@@ -130,7 +193,7 @@ void GameSit( ClientLocalData_t *cld, Player_t *player )
 
 	if( ( player->state & PLAYER_LOGGED ) != PLAYER_LOGGED ) {
 #ifdef _DEBUG
-	LogMessage( LOG_NOTICE, "Gamesit: not logged" );
+	LogMessage( LOG_NOTICE, "Player not logged" );
 #endif
 
 		return;
@@ -154,6 +217,7 @@ void GameSit( ClientLocalData_t *cld, Player_t *player )
 		if( cld->cst->games[ i ].gameId != 0 ) {
 			if( cld->cst->games[ i ].gameId == (int )sd->gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
 				if( ( cld->cst->games[ i ].player1 == NULL && (int )sd->slot == COLOR_WHITE ) || ( cld->cst->games[ i ].player2 == NULL && (int )sd->slot == COLOR_BLACK ) ) {
+					// player sits down - remove him from spectators
 					for( k = 0; k < MAX_SPECTATORS; k++ ) {
 						if( cld->cst->games[ i ].spectators[ k ] == player ) {
 							cld->cst->games[ i ].spectators[ k ] = NULL;
@@ -177,6 +241,7 @@ void GameSit( ClientLocalData_t *cld, Player_t *player )
 						cld->cst->games[ i ].player2 = player;
 					}
 					player->state |= PLAYER_PLAYING;
+					player->state ^= PLAYER_SPECTATOR;
 
 					pd.command = (char )CMD_GAME_SIT;
 					pd.data = &b;
@@ -264,6 +329,7 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 	jd = cld->pd->data;
 	PacketData_t pd;
 	ServerTwoBytes_t b;
+	Game_t *g;
 
 	if( ( player->state & PLAYER_LOGGED ) != PLAYER_LOGGED ) 
 		return;
@@ -275,7 +341,15 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 	LogMessage( LOG_NOTICE, "game join" );
 #endif
 
-	printf( "gameId: %d\n", (int )jd->gameId );
+	// player is already in another game?
+	if( ( g = FindGameByPlayer( cld, player ) ) != NULL ) {
+		// player wants to join the same game
+		if( g->gameId == (int )jd->gameId ) 
+			return;
+	
+		// remove player from existing game before he joins a new one
+		RemovePlayerGame( cld, player );		
+	}
 
 //	pthread_mutex_lock( cld->mutex );
 	int i, k;
@@ -500,7 +574,16 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 			g->player1RemTime = 10.0f;
 			g->player2RemTime = 10.0f;
 			g->state |= GAME_OPENED;
+
+			// init pointers
+			g->listPieces = NULL;
+			g->player1 = NULL;
+			g->player2 = NULL;
 			g->nextMove = NULL;
+			int k;
+			for( k = 0; k < MAX_SPECTATORS; k++ ) {
+				g->spectators[ k ] = NULL;
+			}
 	
 //			pthread_mutex_unlock( cld->mutex );
 			return g;

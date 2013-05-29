@@ -102,53 +102,50 @@ void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 	BYTE players = 0;
 
 	if( ( g = FindGameByPlayer( cld, p ) ) == NULL ) {
-		printf( "findgamebyplayer null\n" );
 		return;
 	}
 
-	printf("found game %d\n", g->gameId );
-
-	players = GetPlayersCount( g );	
-	printf( "number of players for this game total, before memset0: %d\n", players );
-
-	// remove a player from game
+	// Remove a player from game
+	//
+	// if there is a bug when player not being removed properly,
+	// it clearly is double-added somewhere else
 	{ 
-	if( g->player1 == p ) 
+	if( g->player1 == p ) {
 		g->player1 = NULL;
+		goto removed;
+	}
 
-	if( g->player2 == p  ) 
+	if( g->player2 == p  ) {
 		g->player2 = NULL;
+		goto removed;
+	}	
 
 	int j;
 	for( j = 0; j < MAX_SPECTATORS; j++ ) {
 		if( g->spectators[ j ] == p ) {
 			g->spectators[ j ] = NULL;
-			break;
+			goto removed;
 		}
 	}
 	}
 
+	removed:
 	players = GetPlayersCount( g );	
-
-#ifdef _DEBUG
-	char buf[ 0x40 ];
-	sprintf( buf, "RemovePlayerGame: players count: %d", players );
-	LogMessage( LOG_NOTICE, buf );
-#endif
 
 	// if no player left, remove game
 	if( players == 0 ) {
+		memset( g, 0, sizeof( Game_t ) );
+
 		pd.command = (char )CMD_GAME_CREATE;
 		pd.data = &b;
 		b.byte0 = (char )CMD_GAME_CREATE_PARAM_DELETE;
 		b.byte1 = (char )g->gameId;
 	
-		printf("sent game ID: %d\n", (int )b.byte1 );	
+		printf("Remove Game ID: %d\n", (int )b.byte1 );	
 		BroadcastToPlayers( cld, &pd );
-
-		memset( g, 0, sizeof( Game_t ) );
-	} else
-		printf( "number of players for this game total: %d\n", players );
+	} else {
+		printf( "Game not removed. Players: %d\n", players );
+	}
 }
 
 void RemovePlayer( ClientLocalData_t *cld )

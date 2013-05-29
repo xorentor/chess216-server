@@ -226,10 +226,23 @@ inline void setUserFlag( const char *username, const int flag, const int value )
 	alfree( buffer );
 }
 
+void print_hash( const unsigned char* c )
+{
+    printf( "The hash is: " );
+
+    int index;
+    for(index = 0; index < 32; index++)
+        printf( "%X", *c++ );
+
+    printf( "\n" );
+}
+
 inline char verifyUser( const char *username, unsigned char userpass[] )
 {
 	if( strlen( username ) < 1 )
 		return -1;
+
+	print_hash( userpass );
 
 	int pos;
 	User_t *u;
