@@ -43,7 +43,7 @@ Player_t *StorePlayer( ClientLocalData_t *cld )
 
 			p->socketDesc = cld->socketDesc;		// copy this!
 			p->state = 0;
-
+	
 			( cld->cst->info.playersCount )++;
 #ifdef _DEBUG
 			LogMessage( LOG_NOTICE, "Player_t stored" );
@@ -134,7 +134,7 @@ void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 
 	// if no player left, remove game
 	if( players == 0 ) {
-		memset( g, 0, sizeof( Game_t ) );
+		RemoveGame( g );
 
 		pd.command = (char )CMD_GAME_CREATE;
 		pd.data = &b;
@@ -170,4 +170,13 @@ void RemovePlayer( ClientLocalData_t *cld )
 void FreePlayer( Player_t *p )
 {
 	memset( p, 0, sizeof( Player_t ) );
+}
+
+void RemoveGame( Game_t *g ) 
+{
+	// max_spectators * size of 1 Player_t pointer
+	memset( g->spectators, 0, MAX_SPECTATORS * sizeof( Player_t * ) );
+
+	// remove the rest
+	memset( g, 0, sizeof( Game_t ) );
 }

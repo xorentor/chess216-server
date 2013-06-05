@@ -11,6 +11,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <memory.h>
+#include <math.h>
 
 #define 	_DEBUG			0
 #define		_DEBUG_GAME		0
@@ -82,12 +83,13 @@ enum {
 	CMD_GAME_JOIN_PARAM_OK,
 	CMD_GAME_JOIN_PARAM_NOK,
 	CMD_GAME_BEGIN_PARAM_OK,
-	CMD_GAME_PARAM_CHECKMATE,
         CMD_GAME_PARAM_NEXTWHITE,
         CMD_GAME_PARAM_NEXTBLACK,
 	CMD_GAME_CREATE_PARAM_DELETE,
         CMD_GAME_STAND_PARAM_OK,
         CMD_GAME_STAND_PARAM_NOK,
+	CMD_GAME_PARAM_CHECKMATE_W,
+	CMD_GAME_PARAM_CHECKMATE_B,
 };
 
 enum
@@ -137,8 +139,16 @@ typedef struct Player_s
 	time_t loggedTime;
 	char username[ 32 ];
 	int socketDesc;
+	double elorating;
 	int state;		// logged, sitting, playing, chatting, away, ...
 } Player_t;
+
+typedef struct GameLoginSrv_s
+{
+	char param;
+	char username[ 32 ];
+	double elorating;
+} GameLoginSrv_t;
 
 typedef struct Piece_s
 {

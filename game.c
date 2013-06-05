@@ -6,6 +6,52 @@
 #include "game.h"
 #include "./include/filedb.h"
 
+void EndGame( Game_t *g, Player_t *winner )
+{
+	double win = 1.0f, draw = 0.5f, lose = 0.0f;
+
+	// close the game
+	g->state ^= GAME_OPENED;
+	
+	// draw
+	if( winner == NULL ) {
+		UpdateElo( &g->player1->elorating, &g->player2->elorating, &draw );
+		UpdateElo( &g->player2->elorating, &g->player1->elorating, &draw );
+	}
+	// somebody won
+	else if( winner != NULL ) {
+		if( winner == g->player1 ) {
+			UpdateElo( &g->player1->elorating, &g->player2->elorating, &win );
+			UpdateElo( &g->player2->elorating, &g->player1->elorating, &lose );
+		} else if( winner == g->player2 ) {
+			UpdateElo( &g->player2->elorating, &g->player1->elorating, &win );
+			UpdateElo( &g->player1->elorating, &g->player2->elorating, &lose );
+		}
+	}
+	
+	setEloByUser( g->player1->username, (int )g->player1->elorating );
+	setEloByUser( g->player2->username, (int )g->player2->elorating );
+
+	// remove after all
+	RemoveGame( g );
+}
+
+void UpdateElo( double *w, const double *l, const double *state )
+{
+        int k = 32;
+        double exp;
+
+        exp = 1 / ( 1 + pow( 10.0f, ( ( *l - *w ) / 400 ) ) );
+
+        if( ( *w >= 2100 && *w < 2401 ) || ( *l >= 2100 && *l < 2401 ) )
+                k = 24;
+        else if( *w > 2400 && *l > 2400 )
+                k = 16;
+
+        *w += k * ( *state - exp );
+        *w = roundup( w );
+}
+
 void GameGetInitialData( ClientLocalData_t *cld )
 {
 	// TODO:
@@ -81,6 +127,7 @@ void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 	pd.command = (char )CMD_GAME_MOVEPIECE;
 
 	switch( r ) {
+		// regular move
 		case 1:
 			ps.pieceId = (char )piece;
 			ps.xdest = (char )md->xdest;
@@ -96,19 +143,21 @@ void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 
 			BroadcastToGame( g, &pd );
 			break;
+		// checkmate - Black
 		case 2:
 			ps.pieceId = (char )piece;
 			ps.xdest = (char )md->xdest;
 			ps.ydest = (char )md->ydest;
-			ps.checkMate = (char )COLOR_WHITE;
+			ps.checkMate = (char )CMD_GAME_PARAM_CHECKMATE_B;
 
 			BroadcastToGame( g, &pd );
 			break;
+		// checkmate - White
 		case 3:
 			ps.pieceId = (char )piece;
 			ps.xdest = (char )md->xdest;
 			ps.ydest = (char )md->ydest;
-			ps.checkMate = (char )COLOR_BLACK;
+			ps.checkMate = (char )CMD_GAME_PARAM_CHECKMATE_W;
 
 			BroadcastToGame( g, &pd );
 			break;
@@ -135,8 +184,6 @@ void GameStand( ClientLocalData_t *cld, Player_t *player )
 		return;
 	}
 
-	printf("gamestand\n");
-
 	int i, k;
 	for( i = 0; i < MAX_GAMES; i++ ) {
 		if( cld->cst->games[ i ].gameId != 0 ) {
@@ -145,7 +192,7 @@ void GameStand( ClientLocalData_t *cld, Player_t *player )
 			if( cld->cst->games[ i ].state & GAME_PLAYING )
 				return;
 
-				if( ( cld->cst->games[ i ].player1 != NULL && (int )sd->slot == COLOR_WHITE ) || ( cld->cst->games[ i ].player2 != NULL && (int )sd->slot == COLOR_BLACK ) ) {
+				if( ( cld->cst->games[ i ].player1 == player && (int )sd->slot == COLOR_WHITE ) || ( cld->cst->games[ i ].player2 == player && (int )sd->slot == COLOR_BLACK ) ) {
 					if( (int )sd->slot == COLOR_WHITE ) {
 #ifdef _DEBUG
 						LogMessage( LOG_NOTICE, "GameSit: player1 stand" );
@@ -439,8 +486,9 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 	LoginData_t *ld;
 	ld = (LoginData_t *)(cld->pd->data);	
 	PacketData_t pd;
-	ServerByte_t b;
-	
+	GameLoginSrv_t b;
+
+	memset( &b, 0, sizeof( b ) );	
 	// temp
 	/*
 	const char *user, *pass;
@@ -464,16 +512,21 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 #endif	
 		pd.command = (char )CMD_LOGIN;
 		pd.data = &b;
-		b.byte0 = (char )CMD_LOGIN_PARAM_DETAILS_ERR;
-			
+		//b.byte0 = (char )CMD_LOGIN_PARAM_DETAILS_ERR;
+		b.param = (char )CMD_LOGIN_PARAM_DETAILS_ERR;
+
 		ReplyToPlayer( &pd, &cld->socketDesc );
 		
 		return;
 	}
 
 	memset( player->username, 0, sizeof( player->username ) );
-	memcpy( player->username, ld->username, strlen( ld->username ) );
+	if( strlen( ld->username ) > sizeof( player->username ) )
+		memcpy( player->username, ld->username, sizeof( player->username ) );
+	else
+		memcpy( player->username, ld->username, strlen( ld->username ) );
 	player->state |= PLAYER_LOGGED;
+	player->elorating = getEloByUser( player->username );
 
 #ifdef _DEBUG
 	LogMessage( LOG_NOTICE, "user logged successfully" );
@@ -481,8 +534,12 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 
 	pd.command = (char )CMD_LOGIN;
 	pd.data = &b;
-	b.byte0 = (char )CMD_LOGIN_PARAM_DETAILS_OK;
-		
+//	b.byte0 = (char )CMD_LOGIN_PARAM_DETAILS_OK;
+	b.param = (char )CMD_LOGIN_PARAM_DETAILS_OK;
+	memcpy( &b.username, player->username, strlen( player->username ) );
+	memcpy( &b.elorating, (char *)&player->elorating, sizeof( player->elorating ) );
+	printf("ELOrating: %f\n", player->elorating );
+
 	ReplyToPlayer( &pd, &cld->socketDesc );
 
 	// when a login is successful, update client

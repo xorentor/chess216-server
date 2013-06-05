@@ -18,7 +18,8 @@ void PacketSend( PacketData_t *pd, const int *sd )
 #ifdef _DEBUG
 			LogMessage( LOG_NOTICE, "server reply: game login" );
 #endif
-			memcpy( output + sizeof( pd->command ), &( ( (ServerByte_t *)pd->data )->byte0 ), sizeof( ( (ServerByte_t *)pd->data )->byte0 ) );
+			//memcpy( output + sizeof( pd->command ), &( ( (ServerByte_t *)pd->data )->byte0 ), sizeof( ( (ServerByte_t *)pd->data )->byte0 ) );
+			memcpy( output + sizeof( pd->command ), (char *)pd->data, sizeof( GameLoginSrv_t ) );
 			break;
 		
 		case CMD_GAME_CREATE:

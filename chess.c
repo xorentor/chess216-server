@@ -757,12 +757,17 @@ INLINE BYTE ClientMovePiece( const BYTE *xsrc, const BYTE *ysrc, const BYTE *x, 
 					FinalMovePiece( listPieces[ i ], x, y );
 					*piece = i;
 
-					if( listPieces[ i ]->color == COLOR_WHITE ) 
+					if( listPieces[ i ]->color == COLOR_WHITE ) {
+						// white wins
 						if( KingCheckMate( COLOR_BLACK ) ) 
 							return 2;
-					else 
+					} else {
+						// black wins
 						if( KingCheckMate( COLOR_WHITE ) ) 
 							return 3;
+					}
+
+					// TODO: check draw
 					
 					return 1;
 				}
