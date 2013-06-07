@@ -148,12 +148,36 @@ INLINE pthread_t *GetPthread( Thread_t *threads )
 
 void *ServerThread( void *params )
 {
-	int flag = 0;
+	int flag = 0, i;
+	char buffer[40];
+	PacketData_t pd;
+ 	GameTimerSrv_t b;
+	CrossThread_t *cst;
+
+	memset( &b, 0, sizeof( b ) );
+	pd.command = CMD_GAME_TIMER;
+	pd.data = &b;
+	
+	cst = ( ( ClientThread_t *)params )->cst;
 	while( flag != F_QUIT )
 	{
 		//players;
 		//games;
-
+		for( i = 0; i < MAX_GAMES; i++ ) {
+			if( cst->games[ i ].gameId < 1 )
+				continue;
+			printf("checking gameid: %d\n", cst->games[ i ].gameId );
+			if( cst->games[ i ].state & GAME_PLAYING ) {
+				printf("sending to game %d\n", cst->games[ i ].gameId );
+				b.p1_min = 10;
+				b.p1_sec -= 1;
+				b.p2_min = 10;
+				b.p2_sec -= 1;
+				BroadcastToGame( &cst->games[ i ], &pd );
+			}
+		}		
+		
+		printf("sending from server thread\n" );
 		sleep( 1 );
 	}
 }

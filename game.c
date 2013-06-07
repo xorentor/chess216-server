@@ -627,9 +627,10 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 
 			// default game state
 			g->gameId = i;
-			printf("new game ID: %d\n", g->gameId );
-			g->player1RemTime = 10.0f;
-			g->player2RemTime = 10.0f;
+			g->p1_min = 10;
+			g->p1_sec = 0;
+			g->p2_min = 10;
+			g->p2_sec = 0;
 			g->state |= GAME_OPENED;
 
 			// init pointers

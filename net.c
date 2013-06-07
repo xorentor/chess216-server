@@ -68,6 +68,12 @@ void PacketSend( PacketData_t *pd, const int *sd )
 #endif
 			memcpy( output + sizeof( pd->command ), (char *)pd->data, sizeof( GameSitServerData_t ) );
 			break;
+		case CMD_GAME_TIMER:
+#ifdef _DEBUG
+			LogMessage( LOG_NOTICE, "server reply: timer" );
+#endif
+
+			break;
 
 		default:
 			return;
@@ -85,7 +91,7 @@ void BroadcastToGame( Game_t *game, PacketData_t *pd )
 	if( game == NULL ) {
 		//pthread_mutex_unlock( cld->mutex );
 #ifdef _DEBUG
-		LogMessage( LOG_NOTICE, "boardcastGames: game null" );
+		LogMessage( LOG_NOTICE, "boardcastGames game null" );
 #endif
 		return;
 	}
@@ -94,11 +100,18 @@ void BroadcastToGame( Game_t *game, PacketData_t *pd )
 #endif
 
 	if( game->player1 != NULL ) {
+#ifdef _DEBUG
+		LogMessage( LOG_NOTICE, "boardcastGames: player1 before packet send" );
+#endif
+
 		PacketSend( pd, &game->player1->socketDesc );
 #ifdef _DEBUG
 		LogMessage( LOG_NOTICE, "boardcastGames: player1 exists" );
 #endif
 	}
+#ifdef _DEBUG
+	LogMessage( LOG_NOTICE, "boardcastGames: after player1" );
+#endif
 
 	if( game->player2 != NULL ) {
 		PacketSend( pd, &game->player2->socketDesc );

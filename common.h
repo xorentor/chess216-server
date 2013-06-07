@@ -73,6 +73,7 @@ enum {
         CMD_GAME_MOVEPIECE,
 	CMD_GAME_INITIAL_PIECES,
 	CMD_GAME_STAND,
+	CMD_GAME_TIMER,
 };      
                                           
 enum {
@@ -90,6 +91,8 @@ enum {
         CMD_GAME_STAND_PARAM_NOK,
 	CMD_GAME_PARAM_CHECKMATE_W,
 	CMD_GAME_PARAM_CHECKMATE_B,
+	CMD_GAME_TIMER_PARAM_W,
+	CMD_GAME_TIMER_PARAM_B,	
 };
 
 enum
@@ -133,6 +136,14 @@ typedef struct ServerTwoBytes_s
 	char byte0;
 	char byte1;
 } ServerTwoBytes_t;
+
+typedef struct GameTimerSrv_s
+{
+	char p1_min;
+	char p1_sec;
+	char p2_min;
+	char p2_sec;
+} GameTimerSrv_t;
 
 typedef struct Player_s
 {
@@ -235,8 +246,10 @@ typedef struct Game_s
 	Player_t *player2;
 	Player_t *spectators[ MAX_SPECTATORS ];
 	Player_t *nextMove;
-	float player1RemTime;
-	float player2RemTime;
+	char p1_min;
+	char p1_sec;
+	char p2_min;
+	char p2_sec;
 	int state;
 } Game_t;
 
