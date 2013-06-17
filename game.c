@@ -10,8 +10,12 @@ void EndGame( Game_t *g, Player_t *winner )
 {
 	double win = 1.0f, draw = 0.5f, lose = 0.0f;
 
+	assert( g );
+	assert( winner );
+
 	// close the game
 	g->state ^= GAME_OPENED;
+	g->state ^= GAME_PLAYING;
 	
 	// draw
 	if( winner == NULL ) {
@@ -41,6 +45,10 @@ void UpdateElo( double *w, const double *l, const double *state )
         int k = 32;
         double exp;
 
+	assert( w );
+	assert( l );
+	assert( state );
+
         exp = 1 / ( 1 + pow( 10.0f, ( ( *l - *w ) / 400 ) ) );
 
         if( ( *w >= 2100 && *w < 2401 ) || ( *l >= 2100 && *l < 2401 ) )
@@ -50,6 +58,7 @@ void UpdateElo( double *w, const double *l, const double *state )
 
         *w += k * ( *state - exp );
         *w = roundup( w );
+
 }
 
 void GameGetInitialData( ClientLocalData_t *cld )
@@ -627,10 +636,10 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 
 			// default game state
 			g->gameId = i;
-			g->p1_min = 10;
-			g->p1_sec = 0;
-			g->p2_min = 10;
-			g->p2_sec = 0;
+			g->p1_min = 0;
+			g->p1_sec = 2;
+			g->p2_min = 0;
+			g->p2_sec = 2;
 			g->state |= GAME_OPENED;
 
 			// init pointers

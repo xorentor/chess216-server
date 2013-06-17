@@ -19,11 +19,6 @@ INLINE void DeletePthread( Thread_t *threads, const pthread_t *pt )
 	}
 }
 
-/*
-* variables/functions that require mutex:
-* - DeletePthread
-* - DeleteSD
-*/
 INLINE void *ClientInit( void *params )
 {
 	ClientLocalData_t data; 
@@ -153,6 +148,7 @@ void *ServerThread( void *params )
 	PacketData_t pd;
  	GameTimerSrv_t b;
 	CrossThread_t *cst;
+	Game_t *g = NULL;
 
 	memset( &b, 0, sizeof( b ) );
 	pd.command = CMD_GAME_TIMER;
@@ -166,14 +162,43 @@ void *ServerThread( void *params )
 		for( i = 0; i < MAX_GAMES; i++ ) {
 			if( cst->games[ i ].gameId < 1 )
 				continue;
-			printf("checking gameid: %d\n", cst->games[ i ].gameId );
+			g = &cst->games[ i ];
 			if( cst->games[ i ].state & GAME_PLAYING ) {
-				printf("sending to game %d\n", cst->games[ i ].gameId );
-				b.p1_min = 10;
-				b.p1_sec -= 1;
-				b.p2_min = 10;
-				b.p2_sec -= 1;
+				
+
+				if( cst->games[ i ].nextMove == cst->games[ i ].player1 ) {
+					if( cst->games[ i ].p1_sec == 0 ) {
+						cst->games[ i ].p1_sec = 59;
+						cst->games[ i ].p1_min--;
+					} else {
+						cst->games[ i ].p1_sec--;
+					}
+				}
+
+				if( cst->games[ i ].nextMove == cst->games[ i ].player2 ) {
+					if( cst->games[ i ].p2_sec == 0 ) {
+						cst->games[ i ].p2_sec = 59;
+						cst->games[ i ].p2_min--;
+					} else {
+						cst->games[ i ].p2_sec--;
+					}
+				}
+
+				b.p1_sec = cst->games[ i ].p1_sec;
+				b.p1_min = cst->games[ i ].p1_min;
+				b.p2_sec = cst->games[ i ].p2_sec;
+				b.p2_min = cst->games[ i ].p2_min;
+
 				BroadcastToGame( &cst->games[ i ], &pd );
+
+				if( g->p1_sec == 0 && g->p1_min == 0 ) {
+					EndGame( g, g->player2 );
+					continue;
+				}
+				if( g->p2_sec == 0 && g->p2_min == 0 ) {
+					EndGame( g, g->player1 );
+					continue;
+				}
 			}
 		}		
 		
@@ -234,6 +259,7 @@ int main( int argc, char **argv )
 	Thread_t threads[ MAX_THREADS ];
 	ClientThread_t ct;
 	CrossThread_t cst;
+	pthread_mutex_t mutex;
 
 	memset( &cst.players, 0, sizeof( cst.players ) );
 	memset( &cst.games, 0, sizeof( cst.games ) );
@@ -260,7 +286,7 @@ int main( int argc, char **argv )
 	pthread_mutex_init( &mutex, NULL );
 	InitDescriptors();
 	memset( (char *)&serv_addr, 0, sizeof( serv_addr ) );
-     	portno = 5777; //atoi( argv[1] );
+     	portno = atoi( argv[1] ); // 5777
      	serv_addr.sin_family = AF_INET;
      	serv_addr.sin_addr.s_addr = INADDR_ANY;
      	serv_addr.sin_port = htons( portno );

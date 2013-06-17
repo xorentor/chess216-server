@@ -105,7 +105,7 @@ void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 		return;
 	}
 
-	// Remove a player from game
+	// Remove a player/spectator from game
 	//
 	// if there is a bug when player not being removed properly,
 	// it clearly is double-added somewhere else
@@ -134,13 +134,12 @@ void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 
 	// if no player left, remove game
 	if( players == 0 ) {
-		RemoveGame( g );
-
 		pd.command = (char )CMD_GAME_CREATE;
 		pd.data = &b;
 		b.byte0 = (char )CMD_GAME_CREATE_PARAM_DELETE;
 		b.byte1 = (char )g->gameId;
 	
+		RemoveGame( g );
 		printf("Remove Game ID: %d\n", (int )b.byte1 );	
 		BroadcastToPlayers( cld, &pd );
 	} else {
@@ -174,9 +173,6 @@ void FreePlayer( Player_t *p )
 
 void RemoveGame( Game_t *g ) 
 {
-	// max_spectators * size of 1 Player_t pointer
-	memset( g->spectators, 0, MAX_SPECTATORS * sizeof( Player_t * ) );
-
 	// remove the rest
 	memset( g, 0, sizeof( Game_t ) );
 }

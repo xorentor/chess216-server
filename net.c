@@ -72,7 +72,7 @@ void PacketSend( PacketData_t *pd, const int *sd )
 #ifdef _DEBUG
 			LogMessage( LOG_NOTICE, "server reply: timer" );
 #endif
-
+			memcpy( output + sizeof( pd->command ), (char *)pd->data, sizeof( GameTimerSrv_t ) );
 			break;
 
 		default:
