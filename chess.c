@@ -2,12 +2,13 @@
 #include "log.h"
 #include "chess.h"
 
-Move_t lastMove; // FIXME: this is wrong
+Move_t *lastMove;
 Pieces_t *listPieces;
 
-INLINE void InitPieces( Pieces_t *pieces ) 
+INLINE void InitPieces( Pieces_t *pieces, Move_t *move ) 
 {
 	listPieces = pieces;
+	lastMove = move;
 	BYTE i = 0;
 
 	// white Pawns
@@ -49,6 +50,7 @@ INLINE void InitPieces( Pieces_t *pieces )
 
 INLINE void AddPiece( Pieces_t *listPieces, const BYTE i, const BYTE x, const BYTE y, const BYTE skin, const BYTE color ) 
 {
+	printf("ADDPIECE id:%d\n", i );
 	// copy them
 	listPieces[ i ]->xpos = x;
 	listPieces[ i ]->ypos = y;
@@ -195,7 +197,7 @@ INLINE BYTE MoveKing( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 
 INLINE BYTE KingCheck( const BYTE *color )
 {
-	Piece_t *king;
+	Piece_t *king = NULL;
 	BYTE i;
 	// get king of the same colour
 	for( i = 0; i < MAX_PIECES; i++ ) {
@@ -213,6 +215,9 @@ INLINE BYTE KingCheck( const BYTE *color )
 		}
 	}
 
+	if( king == NULL )
+		return cfalse;
+	
 	// see if enemy pieces can reach king
 	for( i = 0; i < MAX_PIECES; i++ ) {
 		if( !( listPieces[ i ]->state & PIECE_INPLAY ) )
@@ -641,10 +646,10 @@ INLINE BYTE MoveKnight( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 INLINE BYTE EnPassant( Piece_t *piece, const BYTE *xdest, const BYTE *ydest )
 {
 	if( piece->color == COLOR_BLACK ) {
-		if( lastMove.skinID == WHITE_PAWN && lastMove.srcY == 6 && lastMove.destY == 4 && piece->skinID == BLACK_PAWN && ( piece->xpos == lastMove.destX + 1 || piece->xpos == lastMove.destX - 1 ) && piece->ypos == lastMove.destY && *xdest == lastMove.destX && *ydest == ( lastMove.destY + 1 ) ) 
+		if( lastMove->skinID == WHITE_PAWN && lastMove->srcY == 6 && lastMove->destY == 4 && piece->skinID == BLACK_PAWN && ( piece->xpos == lastMove->destX + 1 || piece->xpos == lastMove->destX - 1 ) && piece->ypos == lastMove->destY && *xdest == lastMove->destX && *ydest == ( lastMove->destY + 1 ) ) 
 			return ctrue;
 	} else {
-		if( lastMove.skinID == BLACK_PAWN && lastMove.srcY == 1 && lastMove.destY == 3 && piece->skinID == WHITE_PAWN && ( piece->xpos == lastMove.destX + 1 || piece->xpos == lastMove.destX - 1 ) && piece->ypos == lastMove.destY && *xdest == lastMove.destX && *ydest == ( lastMove.destY - 1 ) ) 
+		if( lastMove->skinID == BLACK_PAWN && lastMove->srcY == 1 && lastMove->destY == 3 && piece->skinID == WHITE_PAWN && ( piece->xpos == lastMove->destX + 1 || piece->xpos == lastMove->destX - 1 ) && piece->ypos == lastMove->destY && *xdest == lastMove->destX && *ydest == ( lastMove->destY - 1 ) ) 
 			return ctrue;
 	}
 
@@ -666,11 +671,11 @@ INLINE void FinalMovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest
 	}
 
 	// copy them
-	lastMove.skinID = piece->skinID;
-	lastMove.srcX = piece->xpos;
-	lastMove.srcY = piece->ypos;
-	lastMove.destX = *xdest;
-	lastMove.destY = *ydest;
+	lastMove->skinID = piece->skinID;
+	lastMove->srcX = piece->xpos;
+	lastMove->srcY = piece->ypos;
+	lastMove->destX = *xdest;
+	lastMove->destY = *ydest;
 
 	// castle king's side
 	if( *xdest == ( piece->xpos + 2 ) && *ydest == piece->ypos && ( piece->state & PIECE_ISINITIAL ) && ( piece->skinID == BLACK_KING || piece->skinID == WHITE_KING ) ) {
@@ -732,7 +737,8 @@ INLINE void FinalMovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest
 			listPieces[ i ]->state ^= PIECE_INPLAY;
 			piece->xpos = *xdest;
 			piece->ypos = *ydest;
-			piece->state ^= PIECE_ISINITIAL; // FIXME: this is wrong
+			if( piece->state & PIECE_ISINITIAL )
+				piece->state ^= PIECE_ISINITIAL; 
 		
 			return;
 		}
@@ -744,7 +750,8 @@ INLINE void FinalMovePiece( Piece_t *piece, const BYTE *xdest, const BYTE *ydest
 
 	piece->xpos = *xdest;
 	piece->ypos = *ydest;
-	piece->state ^= PIECE_ISINITIAL; // FIXME: this is wrong
+	if( piece->state & PIECE_ISINITIAL )
+		piece->state ^= PIECE_ISINITIAL; 
 }	
 
 INLINE BYTE ClientMovePiece( const BYTE *xsrc, const BYTE *ysrc, const BYTE *x, const BYTE *y, BYTE *piece, const BYTE color )

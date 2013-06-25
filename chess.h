@@ -7,7 +7,7 @@
 #define		PIECE_INUSE		0x8
 
 BYTE ClientMovePiece( const BYTE *xsrc, const BYTE *ysrc, const BYTE *x, const BYTE *y, BYTE *piece, const BYTE color );
-void InitPieces( Pieces_t *pieces );	
+void InitPieces( Pieces_t *pieces, Move_t *move );	
 
 void AddPiece( Pieces_t *listPieces, const BYTE i, const BYTE x, const BYTE y, const BYTE skin, const BYTE color );
 void DestroyPieces();

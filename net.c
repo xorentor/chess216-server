@@ -75,12 +75,25 @@ void PacketSend( PacketData_t *pd, const int *sd )
 			memcpy( output + sizeof( pd->command ), (char *)pd->data, sizeof( GameTimerSrv_t ) );
 			break;
 
+		case CMD_GAME_FINISHED:
+			// no data
+			break;
+
+		case CMD_GAME_ELO:
+			memcpy( output + sizeof( pd->command ), (char *)pd->data, sizeof( EloSrv_t ) );
+			break;
+
 		default:
 			return;
 			break;
 	}
 
-	n = write( *sd, output, sizeof( output ) );
+	if( ( n = write( *sd, output, sizeof( output ) ) ) == 0 ) {
+#ifdef _DEBUG
+		LogMessage( LOG_WARNING, "server reply: empty buffer" );
+#endif
+	}
+
 }
 
 void BroadcastToGame( Game_t *game, PacketData_t *pd )
@@ -136,19 +149,19 @@ void BroadcastToGame( Game_t *game, PacketData_t *pd )
 	// pthread_mutex_unlock( cld->mutex );
 }
 
-void BroadcastToPlayers( ClientLocalData_t *cld, PacketData_t *pd )
+void BroadcastToPlayers( Player_t *players, PacketData_t *pd )
 {
 	//pthread_mutex_lock( cld->mutex );
 	int i;
 	for( i = 0; i < MAX_CLIENTS; i++ ) {
-		if( cld->cst->players[ i ].socketDesc != 0 ) {
+		if( players[ i ].socketDesc != 0 ) {
 #ifdef _DEBUG
 			char buf[ 0x40 ];
-			sprintf( buf, "broadcasttoPlayers: %s\n", cld->cst->players[ i ].username );
+			sprintf( buf, "broadcasttoPlayers: %s\n", players[ i ].username );
 			LogMessage( LOG_NOTICE, buf );
 #endif
 
-			PacketSend( pd, &cld->cst->players[ i ].socketDesc );
+			PacketSend( pd, &players[ i ].socketDesc );
 		}
 	}
 

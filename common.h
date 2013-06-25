@@ -16,7 +16,7 @@
 #define 	_DEBUG			0
 #define		_DEBUG_GAME		0
 #define		INLINE			inline
-#define		BYTE			char
+#define		BYTE			unsigned char
 #define		ctrue			1
 #define		cfalse			0
 
@@ -74,6 +74,8 @@ enum {
 	CMD_GAME_INITIAL_PIECES,
 	CMD_GAME_STAND,
 	CMD_GAME_TIMER,
+	CMD_GAME_FINISHED,
+	CMD_GAME_ELO
 };      
                                           
 enum {
@@ -92,7 +94,8 @@ enum {
 	CMD_GAME_PARAM_CHECKMATE_W,
 	CMD_GAME_PARAM_CHECKMATE_B,
 	CMD_GAME_TIMER_PARAM_W,
-	CMD_GAME_TIMER_PARAM_B,	
+	CMD_GAME_TIMER_PARAM_B,
+	CMD_GAME_FINISHED_DRAW	
 };
 
 enum
@@ -166,21 +169,26 @@ typedef struct Piece_s
 // leave these to client
 //	int x;	
 //	int y;
-	char xpos;
-	char ypos;
-	char ID;
-	char skinID;
-	char color;
-	char state;
+	BYTE xpos;
+	BYTE ypos;
+	BYTE ID;
+	BYTE skinID;
+	BYTE color;
+	BYTE state;
+	BYTE t0;
+	BYTE t1;
 } Piece_t;
 
 typedef struct Move_s
 {
-	char skinID;
-	char srcX;
-	char srcY;
-	char destX;
-	char destY;
+	BYTE skinID;
+	BYTE srcX;
+	BYTE srcY;
+	BYTE destX;
+	BYTE destY;
+	BYTE t0;
+	BYTE t1;
+	BYTE t2;
 } Move_t;
 
 typedef Piece_t Pieces_t[ 32 ];
@@ -192,10 +200,10 @@ typedef struct JoinData_s
 
 typedef struct MovePieceData_s
 {
-        char xsrc;      
-        char ysrc;
-        char xdest;     
-        char ydest;
+        BYTE xsrc;      
+        BYTE ysrc;
+        BYTE xdest;     
+        BYTE ydest;
 } MovePieceData_t;
 
 typedef struct GameSitServerData_s
@@ -226,7 +234,7 @@ typedef struct GameSitData_s
 typedef struct LoginData_s
 {
 	char username[ 32 ];
-	char password[ 32 ];
+	unsigned char password[ 32 ];
 } LoginData_t;
 
 typedef struct GamePieceMoveSrv_s
@@ -241,16 +249,24 @@ typedef struct GamePieceMoveSrv_s
 typedef struct Game_s
 {
 	int gameId;
-	Pieces_t *listPieces;
-	Player_t *player1;
-	Player_t *player2;
-	Player_t *spectators[ MAX_SPECTATORS ];
-	Player_t *nextMove;
 	char p1_min;
 	char p1_sec;
 	char p2_min;
 	char p2_sec;
 	int state;
+	Player_t *player1;
+	Player_t *player2;
+	Player_t *spectators[ MAX_SPECTATORS ];
+	Player_t *nextMove;
+	Move_t lastMove;
+	Piece_t pieces[ 32 ];
+	char t0;
+	char t1;
+	char t2;
+	char t3;
+	char t4;
+	char t5;
+	char t6;
 } Game_t;
 
 typedef struct Info_s
@@ -261,7 +277,7 @@ typedef struct Info_s
 
 typedef struct CrossThread_s
 {	
-	Piece_t pieces[ MAX_GAMES ][ 32 ];
+//	Piece_t pieces[ MAX_GAMES ][ 32 ];
 	Game_t games[ MAX_GAMES ];
 	Player_t players[ MAX_CLIENTS ];
 	Info_t info;
@@ -291,5 +307,10 @@ typedef struct ClientThread_s
 	int *sockfd;
 	CrossThread_t *cst;
 } ClientThread_t;
+
+typedef struct EloSrv_s
+{
+	int elo_value;
+} EloSrv_t;
 
 #endif

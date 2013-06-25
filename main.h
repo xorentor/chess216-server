@@ -9,5 +9,6 @@ void InitDescriptors();
 pthread_t *GetPthread( Thread_t *threads );
 void *ClientThread( void *params );
 void *ServerThread( void *params );
+extern void BroadcastToGame( Game_t *game, PacketData_t *pd );
 
 #endif

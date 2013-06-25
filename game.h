@@ -19,6 +19,7 @@ void GameJoinSeatsStatus( ClientLocalData_t *cld, Player_t *player, const int sl
 void GamePiecesStatus( ClientLocalData_t *cld, Pieces_t *pieces );
 
 void UpdateElo( double *w, const double *l, const double *state );
-void EndGame( Game_t *g, Player_t *winner );
+void EndGame( Player_t *players, Game_t *g, Player_t *winner );
+void RemoveGame( Game_t *g ) ;
 
 #endif

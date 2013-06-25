@@ -141,7 +141,7 @@ void RemovePlayerGame( ClientLocalData_t *cld, Player_t *p )
 	
 		RemoveGame( g );
 		printf("Remove Game ID: %d\n", (int )b.byte1 );	
-		BroadcastToPlayers( cld, &pd );
+		BroadcastToPlayers( cld->cst->players, &pd );
 	} else {
 		printf( "Game not removed. Players: %d\n", players );
 	}
@@ -169,10 +169,4 @@ void RemovePlayer( ClientLocalData_t *cld )
 void FreePlayer( Player_t *p )
 {
 	memset( p, 0, sizeof( Player_t ) );
-}
-
-void RemoveGame( Game_t *g ) 
-{
-	// remove the rest
-	memset( g, 0, sizeof( Game_t ) );
 }

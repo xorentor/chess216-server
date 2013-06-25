@@ -25,9 +25,9 @@ INLINE void *ClientInit( void *params )
 
     	char readBuffer[ BUFFER_LEN ];
 	int buffLen = 0, quitFlag = 0;
-	time_t tm;
+	//time_t tm;
 
-	tm = time( NULL );
+	//tm = time( NULL );
 	memset( readBuffer, 0, sizeof( readBuffer ) );
 	data.socketDesc = *( (ThreadParam_t *)params )->socketId;	// copy this!
 	data.mutex = &mutex;
@@ -144,7 +144,6 @@ INLINE pthread_t *GetPthread( Thread_t *threads )
 void *ServerThread( void *params )
 {
 	int flag = 0, i;
-	char buffer[40];
 	PacketData_t pd;
  	GameTimerSrv_t b;
 	CrossThread_t *cst;
@@ -165,7 +164,6 @@ void *ServerThread( void *params )
 			g = &cst->games[ i ];
 			if( cst->games[ i ].state & GAME_PLAYING ) {
 				
-
 				if( cst->games[ i ].nextMove == cst->games[ i ].player1 ) {
 					if( cst->games[ i ].p1_sec == 0 ) {
 						cst->games[ i ].p1_sec = 59;
@@ -188,23 +186,25 @@ void *ServerThread( void *params )
 				b.p1_min = cst->games[ i ].p1_min;
 				b.p2_sec = cst->games[ i ].p2_sec;
 				b.p2_min = cst->games[ i ].p2_min;
+				printf( "test: %d %d %d %d %d %d %d\n", cst->games[ i ].t0, cst->games[ i ].t1, cst->games[ i ].t2, cst->games[ i ].t3, cst->games[ i ].t4, cst->games[ i ].t5, cst->games[ i ].t6 );
 
 				BroadcastToGame( &cst->games[ i ], &pd );
 
 				if( g->p1_sec == 0 && g->p1_min == 0 ) {
-					EndGame( g, g->player2 );
+					EndGame( cst->players, g, g->player2 );
 					continue;
 				}
 				if( g->p2_sec == 0 && g->p2_min == 0 ) {
-					EndGame( g, g->player1 );
+					EndGame( cst->players, g, g->player1 );
 					continue;
 				}
 			}
 		}		
 		
-		printf("sending from server thread\n" );
 		sleep( 1 );
 	}
+
+	return NULL;
 }
 
 void *ClientsThread( void *params )
@@ -248,6 +248,7 @@ void *ClientsThread( void *params )
 		}
 	}
 
+	return NULL;
 }
 
 int main( int argc, char **argv )
@@ -263,7 +264,7 @@ int main( int argc, char **argv )
 
 	memset( &cst.players, 0, sizeof( cst.players ) );
 	memset( &cst.games, 0, sizeof( cst.games ) );
-	memset( &cst.pieces, 0, sizeof( cst.pieces ) );
+	//memset( &cst.pieces, 0, sizeof( cst.pieces ) );
 	
 	cst.info.playersCount = 0;
 	cst.info.gamesCount = 0;

@@ -6,8 +6,26 @@
 #include "game.h"
 #include "./include/filedb.h"
 
-void EndGame( Game_t *g, Player_t *winner )
+inline int ISSET( void *mem, int s )
 {
+        char *t;
+        t = (char *)mem;
+        while( s > 0 ) {
+        	if( t[ --s ] != 0 ) 
+                	return 1;
+	}
+        return 0;
+} 
+
+void EndGame( Player_t *players, Game_t *g, Player_t *winner )
+{
+	PacketData_t pd;
+	ServerTwoBytes_t b;
+	EloSrv_t elo;
+
+	memset( &elo, 0, sizeof( elo ) );
+	memset( &b, 0, sizeof( b ) );
+
 	double win = 1.0f, draw = 0.5f, lose = 0.0f;
 
 	assert( g );
@@ -16,25 +34,59 @@ void EndGame( Game_t *g, Player_t *winner )
 	// close the game
 	g->state ^= GAME_OPENED;
 	g->state ^= GAME_PLAYING;
-	
+
+	// tell clients to remove game from list	
+	pd.command = (char )CMD_GAME_CREATE;
+	pd.data = &b;
+	b.byte0 = (char )CMD_GAME_CREATE_PARAM_DELETE;
+	b.byte1 = (char )g->gameId;
+	BroadcastToPlayers( players, &pd );
+	memset( &b, 0, sizeof( b ) );
+
 	// draw
 	if( winner == NULL ) {
 		UpdateElo( &g->player1->elorating, &g->player2->elorating, &draw );
 		UpdateElo( &g->player2->elorating, &g->player1->elorating, &draw );
+		b.byte0 = CMD_GAME_FINISHED_DRAW;
 	}
 	// somebody won
 	else if( winner != NULL ) {
 		if( winner == g->player1 ) {
 			UpdateElo( &g->player1->elorating, &g->player2->elorating, &win );
 			UpdateElo( &g->player2->elorating, &g->player1->elorating, &lose );
+			b.byte0 = COLOR_WHITE;
 		} else if( winner == g->player2 ) {
 			UpdateElo( &g->player2->elorating, &g->player1->elorating, &win );
 			UpdateElo( &g->player1->elorating, &g->player2->elorating, &lose );
+			b.byte0 = COLOR_BLACK;
 		}
 	}
 	
 	setEloByUser( g->player1->username, (int )g->player1->elorating );
 	setEloByUser( g->player2->username, (int )g->player2->elorating );
+
+	// reset players' state
+	g->player1->state &= PLAYER_LOGGED;
+	g->player2->state &= PLAYER_LOGGED;
+
+	// reset spectators' state	
+	int i;
+	for( i = 0; i < MAX_SPECTATORS; i++ ) {
+		if( g->spectators[ i ] != NULL )
+			g->spectators[ i ]->state &= PLAYER_LOGGED;
+	}
+
+	// tell game participants( players, specs ) it's over and zero init theirs gui
+	pd.command = (char )CMD_GAME_FINISHED;
+	BroadcastToGame( g, &pd );
+
+	// tell players new elo ratings
+	pd.command = (char )CMD_GAME_ELO;
+	pd.data = &elo;
+	elo.elo_value = (int )g->player1->elorating;
+	ReplyToPlayer( &pd, &g->player1->socketDesc );
+	elo.elo_value = (int )g->player2->elorating;
+	ReplyToPlayer( &pd, &g->player2->socketDesc );
 
 	// remove after all
 	RemoveGame( g );
@@ -124,9 +176,9 @@ void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 		return;
 	}
 
-	if( g->listPieces == NULL ) {
+	if( ISSET( &g->pieces, sizeof( g->pieces ) ) == 0 ) {
 #ifdef _DEBUG
-	LogMessage( LOG_NOTICE, "GameMovePiece: listPieces NULL" );
+	LogMessage( LOG_NOTICE, "GameMovePiece: pieces NULL" );
 #endif
 		return;
 	}
@@ -160,6 +212,7 @@ void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 			ps.checkMate = (char )CMD_GAME_PARAM_CHECKMATE_B;
 
 			BroadcastToGame( g, &pd );
+			EndGame( cld->cst->players, g, g->player1 );
 			break;
 		// checkmate - White
 		case 3:
@@ -169,6 +222,7 @@ void GameMovePiece( ClientLocalData_t *cld, Player_t *player )
 			ps.checkMate = (char )CMD_GAME_PARAM_CHECKMATE_W;
 
 			BroadcastToGame( g, &pd );
+			EndGame( cld->cst->players, g, g->player2 );
 			break;
 		default:
 			// TODO: let client know - illegal turn
@@ -240,7 +294,7 @@ void GameStand( ClientLocalData_t *cld, Player_t *player )
 void GameSit( ClientLocalData_t *cld, Player_t *player )
 {
 	GameSitData_t *sd;
-	Pieces_t *pieces;
+	//Pieces_t *pieces;
 	sd = cld->pd->data;
 	PacketData_t pd;
 	GameSitServerData_t b;
@@ -307,17 +361,21 @@ void GameSit( ClientLocalData_t *cld, Player_t *player )
 					if( cld->cst->games[ i ].player1 != NULL && cld->cst->games[ i ].player2 != NULL ) {
 						cld->cst->games[ i ].state |= GAME_PLAYING;
 						b.gameBegin = (char )CMD_GAME_BEGIN_PARAM_OK;
+						InitPieces( &cld->cst->games[ i ].pieces, &cld->cst->games[ i ].lastMove );
+//						cld->cst->games[ i ].listPieces = &cld->cst->games[ i ].pieces;
+/*
 						if( ( pieces = GetPieces( cld ) ) != NULL ) {
 							cld->cst->games[ i ].listPieces = pieces;
-							InitPieces( pieces );
+							InitPieces( pieces, &cld->cst->games[ i ].lastMove );
 						} else {	
 							// TODO: cancel game
 							cld->cst->games[ i ].listPieces = NULL;
 							cld->cst->games[ i ].state ^= GAME_PLAYING;
 						}
+*/
 #ifdef _DEBUG
 						char buf[ 0x40 ];
-						sprintf( buf, "GameSit: listPieces: %p", cld->cst->games[ i ].listPieces );
+						sprintf( buf, "GameSit: pieces: %p", cld->cst->games[ i ].pieces );
 						LogMessage( LOG_NOTICE, buf );
 #endif
 					}	
@@ -337,8 +395,8 @@ void GameSit( ClientLocalData_t *cld, Player_t *player )
 
 void GameAutoJoin( ClientLocalData_t *cld, Player_t *player, const int *gameId )
 {
-	JoinData_t *jd;
-	jd = cld->pd->data;
+	//JoinData_t *jd;
+	//jd = cld->pd->data;
 	PacketData_t pd;
 	ServerTwoBytes_t b;
 
@@ -400,11 +458,11 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 	// player is already in another game?
 	if( ( g = FindGameByPlayer( cld, player ) ) != NULL ) {
 		// player wants to join the same game
-		if( g->gameId == (int )jd->gameId ) 
+		if( g->gameId == (int )jd->gameId ) {
+			// remove player from existing game before he joins a new one
+			RemovePlayerGame( cld, player );
 			return;
-	
-		// remove player from existing game before he joins a new one
-		RemovePlayerGame( cld, player );		
+		}
 	}
 
 //	pthread_mutex_lock( cld->mutex );
@@ -432,12 +490,12 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 						if( cld->cst->games[ i ].player2 != NULL ) 
 							GameJoinSeatsStatus( cld, cld->cst->games[ i ].player2, COLOR_BLACK );
 
-						if( cld->cst->games[ i ].listPieces != NULL )
-							GamePiecesStatus( cld, cld->cst->games[ i ].listPieces );
+						if( ISSET( cld->cst->games[ i ].pieces, sizeof( cld->cst->games[ i ].pieces ) ) != 0 )
+							GamePiecesStatus( cld, &cld->cst->games[ i ].pieces );
 
 #ifdef _DEBUG
 						char buf[ 0x40 ];
-						sprintf( buf, "GameSit: listPieces: %p", cld->cst->games[ i ].listPieces );
+						sprintf( buf, "GameSit: pieces: %p", cld->cst->games[ i ].pieces );
 						LogMessage( LOG_NOTICE, buf );
 #endif
 						break;
@@ -498,14 +556,9 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 	GameLoginSrv_t b;
 
 	memset( &b, 0, sizeof( b ) );	
-	// temp
-	/*
-	const char *user, *pass;
-	user = "john";
-	pass = "doe";
-	*/
-	if( strlen( ld->username ) < 2 || strlen( ld->password ) < 2 ) {
-
+	
+	//if( strlen( ld->username ) < 2 || strlen( ld->password ) < 2 ) {
+	if( strlen( ld->username ) < 2 ) {
 #ifdef _DEBUG
 		// send response to client as well
 		LogMessage( LOG_WARNING, "login data incomplete" );
@@ -592,7 +645,7 @@ void GameCreateNew( ClientLocalData_t *cld, Player_t *player )
 	b.byte0 = (char )CMD_GAME_CREATE_PARAM_OK;
 	b.byte1 = (char )g->gameId;
 		
-	BroadcastToPlayers( cld, &pd );
+	BroadcastToPlayers( cld->cst->players, &pd );
 
 	// immediately join
 	GameAutoJoin( cld, player, &g->gameId );
@@ -610,7 +663,7 @@ Game_t *GameByPlayer( ClientLocalData_t *cld, Player_t *p )
 				//pthread_mutex_unlock( cld->mutex );
 				return &cld->cst->games[ i ];
 			}
-		}		
+		}
 	}
 
 //	pthread_mutex_unlock( cld->mutex );
@@ -634,19 +687,22 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 			// default player state
 			p->state |= PLAYER_CREATED_GAME;
 
-			// default game state
+			// init pointers
+//			g->listPieces = NULL;
+			g->player1 = NULL;
+			g->player2 = NULL;
+			g->nextMove = NULL;
+			memset( &g->lastMove, 0, sizeof( g->lastMove ) );
+			memset( &g->pieces, 0, sizeof( g->pieces ) );
+
 			g->gameId = i;
 			g->p1_min = 0;
 			g->p1_sec = 2;
 			g->p2_min = 0;
 			g->p2_sec = 2;
 			g->state |= GAME_OPENED;
+			g->t0 = g->t1 = g->t2 = g->t3 = g->t4 = g->t5 = g->t6 = 0;
 
-			// init pointers
-			g->listPieces = NULL;
-			g->player1 = NULL;
-			g->player2 = NULL;
-			g->nextMove = NULL;
 			int k;
 			for( k = 0; k < MAX_SPECTATORS; k++ ) {
 				g->spectators[ k ] = NULL;
@@ -661,6 +717,7 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 	return NULL;
 }
 
+/*
 Pieces_t *GetPieces( ClientLocalData_t *cld )
 {
 	int i;
@@ -671,4 +728,9 @@ Pieces_t *GetPieces( ClientLocalData_t *cld )
 	}
 
 	return NULL;
+}
+*/
+void RemoveGame( Game_t *g ) 
+{
+	memset( g, 0, sizeof( Game_t ) );
 }
