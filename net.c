@@ -88,6 +88,13 @@ void PacketSend( PacketData_t *pd, const int *sd )
 			break;
 	}
 
+	if( SockOptErr( sd ) != 0 ) {
+#ifdef _DEBUG
+		LogMessage( LOG_WARNING, "socket error" );
+#endif
+		return;
+	}
+
 	if( ( n = write( *sd, output, sizeof( output ) ) ) == 0 ) {
 #ifdef _DEBUG
 		LogMessage( LOG_WARNING, "server reply: empty buffer" );

@@ -20,6 +20,7 @@ void GamePiecesStatus( ClientLocalData_t *cld, Pieces_t *pieces );
 
 void UpdateElo( double *w, const double *l, const double *state );
 void EndGame( Player_t *players, Game_t *g, Player_t *winner );
+void RemovePieces( Pieces_t *pieces );
 void RemoveGame( Game_t *g ) ;
 
 #endif

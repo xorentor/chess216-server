@@ -6,17 +6,35 @@
 #include "game.h"
 #include "player.h"
 
-pthread_mutex_t mutex;
+static pthread_mutex_t mutex_sd = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutex_threads = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutex_games = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutex_players = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutex_pieces = PTHREAD_MUTEX_INITIALIZER;
 int descriptors[ MAX_CLIENTS ];
 
 INLINE void DeletePthread( Thread_t *threads, const pthread_t *pt )
 {
 	int i;
+	pthread_mutex_lock( &mutex_threads );
 	for( i = 0; i < MAX_THREADS; i++ ) {
 		if( threads[ i ].pthread == *pt ) {
 			memset( &(threads[ i ]), 0, sizeof( Thread_t ) );	
 		}
 	}
+	pthread_mutex_unlock( &mutex_threads );
+}
+
+int SockOptErr( const int *sd )
+{
+	int error, r;
+	socklen_t len; 
+
+	assert( sd );
+	error = 0;
+	len = sizeof( error );
+	r = getsockopt( *sd, SOL_SOCKET, SO_ERROR, &error, &len );
+	return error;
 }
 
 INLINE void *ClientInit( void *params )
@@ -25,12 +43,9 @@ INLINE void *ClientInit( void *params )
 
     	char readBuffer[ BUFFER_LEN ];
 	int buffLen = 0, quitFlag = 0;
-	//time_t tm;
 
-	//tm = time( NULL );
-	memset( readBuffer, 0, sizeof( readBuffer ) );
+	memset( &data, 0, sizeof( data ) );
 	data.socketDesc = *( (ThreadParam_t *)params )->socketId;	// copy this!
-	data.mutex = &mutex;
 	data.quitFlag = &quitFlag;
 	data.cst = ( (ThreadParam_t *)params )->cst;
 
@@ -71,20 +86,20 @@ INLINE void *ClientInit( void *params )
 		usleep( 100000 );
 	}
 	
-	pthread_mutex_lock( &mutex );
-		RemovePlayer( &data );
-		DeletePthread( ( (ThreadParam_t *)params )->threads, (pthread_t *)pthread_self() );		
-		DeleteSD( &data.socketDesc );
-	pthread_mutex_unlock( &mutex );
+	RemovePlayer( &data );
+	DeletePthread( ( (ThreadParam_t *)params )->threads, (pthread_t *)pthread_self() );		
+	DeleteSD( &data.socketDesc );
 
 	close( data.socketDesc );
 	pthread_exit( NULL );
+	return NULL;
 }
 
 INLINE void DeleteSD( const int *sd )
 {
 	// TODO: this might cause latency issues as number of clients increases
 	int i;
+	pthread_mutex_lock( &mutex_sd );
 	for( i = 0; i < MAX_CLIENTS; i++ ) {
 		if( descriptors[ i ] == *sd ) {
 #ifdef _DEBUG
@@ -92,16 +107,18 @@ INLINE void DeleteSD( const int *sd )
 			sprintf( buf, "socket descriptor deallocated index: %d value: %d", i, *sd );
 			LogMessage( LOG_NOTICE, buf );
 #endif
-			memset( &(descriptors[ i ]), 0, sizeof( int ) );
+			memset( &(descriptors[ i ]), 0, sizeof( descriptors[ i ] ) );
 			break;
 		}
 	}
+	pthread_mutex_unlock( &mutex_sd );
 }
 
 INLINE const int AddSD( const int *sd )
 {
 	// TODO: this might cause latency issues as number of clients increases
-	int i;
+	int i, r = -1;
+	pthread_mutex_lock( &mutex_sd );
 	for( i = 0; i < MAX_CLIENTS; i++ ) {
 		if( descriptors[ i ] < 1 ) {
 #ifdef _DEBUG
@@ -110,20 +127,20 @@ INLINE const int AddSD( const int *sd )
 			LogMessage( LOG_NOTICE, buf );
 #endif
 			descriptors[ i ] = *sd;
-			return 0; 
+			r = 0;
+			break; 
 		}
 	}
-	return -1;
-}
 
-INLINE void InitDescriptors()
-{
-	memset( descriptors, 0, sizeof( descriptors ) );
+	pthread_mutex_unlock( &mutex_sd );
+	return r;
 }
 
 INLINE pthread_t *GetPthread( Thread_t *threads )
 {
 	int i;
+	pthread_t *r = NULL;
+	pthread_mutex_lock( &mutex_threads );
 	for( i = 0; i < MAX_THREADS; i++ ) {
 		if( threads[ i ].inuse != 1 ) {
 #ifdef	_DEBUG
@@ -134,15 +151,18 @@ INLINE pthread_t *GetPthread( Thread_t *threads )
 			//threads[ i ].pthread = 0;
 			threads[ i ].inuse = 1;
 			threads[ i ].spawned = time( NULL );
-			return &( threads[ i ].pthread );
+			r = &( threads[ i ].pthread );
+			break;
 		}
 	}
-	return NULL;
+	pthread_mutex_unlock( &mutex_threads );
+	return r;
 }
 
 
 void *ServerThread( void *params )
 {
+
 	int flag = 0, i;
 	PacketData_t pd;
  	GameTimerSrv_t b;
@@ -161,9 +181,10 @@ void *ServerThread( void *params )
 		for( i = 0; i < MAX_GAMES; i++ ) {
 			if( cst->games[ i ].gameId < 1 )
 				continue;
+
 			g = &cst->games[ i ];
 			if( cst->games[ i ].state & GAME_PLAYING ) {
-				
+			
 				if( cst->games[ i ].nextMove == cst->games[ i ].player1 ) {
 					if( cst->games[ i ].p1_sec == 0 ) {
 						cst->games[ i ].p1_sec = 59;
@@ -181,13 +202,11 @@ void *ServerThread( void *params )
 						cst->games[ i ].p2_sec--;
 					}
 				}
-
 				b.p1_sec = cst->games[ i ].p1_sec;
 				b.p1_min = cst->games[ i ].p1_min;
 				b.p2_sec = cst->games[ i ].p2_sec;
 				b.p2_min = cst->games[ i ].p2_min;
-				printf( "test: %d %d %d %d %d %d %d\n", cst->games[ i ].t0, cst->games[ i ].t1, cst->games[ i ].t2, cst->games[ i ].t3, cst->games[ i ].t4, cst->games[ i ].t5, cst->games[ i ].t6 );
-
+				
 				BroadcastToGame( &cst->games[ i ], &pd );
 
 				if( g->p1_sec == 0 && g->p1_min == 0 ) {
@@ -204,6 +223,7 @@ void *ServerThread( void *params )
 		sleep( 1 );
 	}
 
+	pthread_exit( NULL );
 	return NULL;
 }
 
@@ -244,10 +264,11 @@ void *ClientsThread( void *params )
 			sprintf( buf, "thread ID: %u", (unsigned int)(*tid) );
 			LogMessage( LOG_NOTICE, buf );
 #endif
-*/
+*/	
 		}
 	}
 
+	pthread_exit( NULL );
 	return NULL;
 }
 
@@ -260,11 +281,15 @@ int main( int argc, char **argv )
 	Thread_t threads[ MAX_THREADS ];
 	ClientThread_t ct;
 	CrossThread_t cst;
-	pthread_mutex_t mutex;
 
-	memset( &cst.players, 0, sizeof( cst.players ) );
-	memset( &cst.games, 0, sizeof( cst.games ) );
-	//memset( &cst.pieces, 0, sizeof( cst.pieces ) );
+     	sockfd = socket( AF_INET, SOCK_STREAM, 0 );
+  	if( sockfd < 0 ) {
+		LogMessage( LOG_ERROR, "opening socket" );
+	}
+
+	memset( descriptors, 0, sizeof( descriptors ) );
+	memset( (char *)&serv_addr, 0, sizeof( serv_addr ) );
+	memset( &cst, 0, sizeof( cst ) );
 	
 	cst.info.playersCount = 0;
 	cst.info.gamesCount = 0;
@@ -274,19 +299,7 @@ int main( int argc, char **argv )
 	ct.clilen = &clilen;
 	ct.sockfd = &sockfd;
 	ct.cst = &cst;
-/*     	if( argc < 2 ) {
-		LogMessage( LOG_ERROR, "no port provided" );
-        	exit(1);
-     	}*/
 
-     	sockfd = socket( AF_INET, SOCK_STREAM, 0 );
-  	if( sockfd < 0 ) {
-		LogMessage( LOG_ERROR, "opening socket" );
-	}
-
-	pthread_mutex_init( &mutex, NULL );
-	InitDescriptors();
-	memset( (char *)&serv_addr, 0, sizeof( serv_addr ) );
      	portno = atoi( argv[1] ); // 5777
      	serv_addr.sin_family = AF_INET;
      	serv_addr.sin_addr.s_addr = INADDR_ANY;

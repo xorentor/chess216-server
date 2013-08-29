@@ -175,8 +175,6 @@ typedef struct Piece_s
 	BYTE skinID;
 	BYTE color;
 	BYTE state;
-	BYTE t0;
-	BYTE t1;
 } Piece_t;
 
 typedef struct Move_s
@@ -259,14 +257,7 @@ typedef struct Game_s
 	Player_t *spectators[ MAX_SPECTATORS ];
 	Player_t *nextMove;
 	Move_t lastMove;
-	Piece_t pieces[ 32 ];
-	char t0;
-	char t1;
-	char t2;
-	char t3;
-	char t4;
-	char t5;
-	char t6;
+	Pieces_t *pieces;
 } Game_t;
 
 typedef struct Info_s
@@ -277,7 +268,7 @@ typedef struct Info_s
 
 typedef struct CrossThread_s
 {	
-//	Piece_t pieces[ MAX_GAMES ][ 32 ];
+	Piece_t pieces[ MAX_GAMES ][ 32 ];
 	Game_t games[ MAX_GAMES ];
 	Player_t players[ MAX_CLIENTS ];
 	Info_t info;
@@ -287,7 +278,7 @@ typedef struct ClientLocalData_s
 {
 	int socketDesc;
 	int *quitFlag;
-	pthread_mutex_t *mutex;
+//	pthread_mutex_t *mutex;
 	PacketData_t *pd;
 	CrossThread_t *cst;
 } ClientLocalData_t;

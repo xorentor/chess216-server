@@ -89,6 +89,7 @@ void EndGame( Player_t *players, Game_t *g, Player_t *winner )
 	ReplyToPlayer( &pd, &g->player2->socketDesc );
 
 	// remove after all
+	RemovePieces( g->pieces );
 	RemoveGame( g );
 }
 
@@ -294,7 +295,7 @@ void GameStand( ClientLocalData_t *cld, Player_t *player )
 void GameSit( ClientLocalData_t *cld, Player_t *player )
 {
 	GameSitData_t *sd;
-	//Pieces_t *pieces;
+	Pieces_t *pieces;
 	sd = cld->pd->data;
 	PacketData_t pd;
 	GameSitServerData_t b;
@@ -319,7 +320,6 @@ void GameSit( ClientLocalData_t *cld, Player_t *player )
 #ifdef _DEBUG
 	LogMessage( LOG_NOTICE, "game sit" );
 #endif
-	printf("gamesit: gameId: %d slot: %d", (int )sd->gameId, (int )sd->slot );
 
 //	pthread_mutex_lock( cld->mutex );
 	int i, k;
@@ -361,18 +361,17 @@ void GameSit( ClientLocalData_t *cld, Player_t *player )
 					if( cld->cst->games[ i ].player1 != NULL && cld->cst->games[ i ].player2 != NULL ) {
 						cld->cst->games[ i ].state |= GAME_PLAYING;
 						b.gameBegin = (char )CMD_GAME_BEGIN_PARAM_OK;
-						InitPieces( &cld->cst->games[ i ].pieces, &cld->cst->games[ i ].lastMove );
-//						cld->cst->games[ i ].listPieces = &cld->cst->games[ i ].pieces;
-/*
+//						InitPieces( &cld->cst->games[ i ].pieces, &cld->cst->games[ i ].lastMove );
+
 						if( ( pieces = GetPieces( cld ) ) != NULL ) {
-							cld->cst->games[ i ].listPieces = pieces;
+							cld->cst->games[ i ].pieces = pieces;
 							InitPieces( pieces, &cld->cst->games[ i ].lastMove );
 						} else {	
 							// TODO: cancel game
-							cld->cst->games[ i ].listPieces = NULL;
+							cld->cst->games[ i ].pieces = NULL;
 							cld->cst->games[ i ].state ^= GAME_PLAYING;
 						}
-*/
+
 #ifdef _DEBUG
 						char buf[ 0x40 ];
 						sprintf( buf, "GameSit: pieces: %p", cld->cst->games[ i ].pieces );
@@ -412,8 +411,6 @@ void GameAutoJoin( ClientLocalData_t *cld, Player_t *player, const int *gameId )
 			if( cld->cst->games[ i ].gameId == *gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
 				for( k = 0; k < MAX_SPECTATORS; k++ ) {
 					if( cld->cst->games[ i ].spectators[ k ] == NULL ) {
-
-						printf( "game join OK, reply now, player as spectator\n" );
 						cld->cst->games[ i ].spectators[ k ] = player;
 						player->state |= PLAYER_INGAME;
 						player->state |= PLAYER_SPECTATOR;
@@ -458,11 +455,11 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 	// player is already in another game?
 	if( ( g = FindGameByPlayer( cld, player ) ) != NULL ) {
 		// player wants to join the same game
-		if( g->gameId == (int )jd->gameId ) {
-			// remove player from existing game before he joins a new one
-			RemovePlayerGame( cld, player );
+		if( g->gameId == (int )jd->gameId ) 
 			return;
-		}
+		
+		// remove player from existing game before he joins a new one
+		RemovePlayerGame( cld, player );
 	}
 
 //	pthread_mutex_lock( cld->mutex );
@@ -472,8 +469,6 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 			if( cld->cst->games[ i ].gameId == (int )jd->gameId && ( cld->cst->games[ i ].state & GAME_OPENED ) ) {
 				for( k = 0; k < MAX_SPECTATORS; k++ ) {
 					if( cld->cst->games[ i ].spectators[ k ] == NULL ) {
-
-						printf( "game join OK, reply now" );
 						cld->cst->games[ i ].spectators[ k ] = player;
 						player->state |= PLAYER_INGAME;
 						player->state |= PLAYER_SPECTATOR;
@@ -490,8 +485,8 @@ void GameJoin( ClientLocalData_t *cld, Player_t *player )
 						if( cld->cst->games[ i ].player2 != NULL ) 
 							GameJoinSeatsStatus( cld, cld->cst->games[ i ].player2, COLOR_BLACK );
 
-						if( ISSET( cld->cst->games[ i ].pieces, sizeof( cld->cst->games[ i ].pieces ) ) != 0 )
-							GamePiecesStatus( cld, &cld->cst->games[ i ].pieces );
+						if( ISSET( &cld->cst->games[ i ].pieces, sizeof( cld->cst->games[ i ].pieces ) ) != 0 )
+							GamePiecesStatus( cld, cld->cst->games[ i ].pieces );
 
 #ifdef _DEBUG
 						char buf[ 0x40 ];
@@ -600,7 +595,6 @@ void GameLogin( ClientLocalData_t *cld, Player_t *player )
 	b.param = (char )CMD_LOGIN_PARAM_DETAILS_OK;
 	memcpy( &b.username, player->username, strlen( player->username ) );
 	memcpy( &b.elorating, (char *)&player->elorating, sizeof( player->elorating ) );
-	printf("ELOrating: %f\n", player->elorating );
 
 	ReplyToPlayer( &pd, &cld->socketDesc );
 
@@ -696,12 +690,11 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 			memset( &g->pieces, 0, sizeof( g->pieces ) );
 
 			g->gameId = i;
-			g->p1_min = 0;
-			g->p1_sec = 2;
-			g->p2_min = 0;
-			g->p2_sec = 2;
+			g->p1_min = 10;
+			g->p1_sec = 0;
+			g->p2_min = 10;
+			g->p2_sec = 0;
 			g->state |= GAME_OPENED;
-			g->t0 = g->t1 = g->t2 = g->t3 = g->t4 = g->t5 = g->t6 = 0;
 
 			int k;
 			for( k = 0; k < MAX_SPECTATORS; k++ ) {
@@ -717,19 +710,30 @@ Game_t *GameStore( ClientLocalData_t *cld, Player_t *p )
 	return NULL;
 }
 
-/*
+// TODO: put pieces[32] to game_t
 Pieces_t *GetPieces( ClientLocalData_t *cld )
 {
 	int i;
 	for( i = 0; i < MAX_GAMES; i++ ) {
 		if( !( cld->cst->pieces[ i ][ 0 ].state & PIECE_INUSE ) ) {
-			 return &( cld->cst->pieces[ i ] );
+			return &( cld->cst->pieces[ i ] );
 		}
 	}
 
 	return NULL;
 }
-*/
+
+void RemovePieces( Pieces_t *pieces )
+{
+	/*
+	if( pieces[ 0 ]->state & PIECE_INUSE ) {
+		printf( "pieces removed \n" );
+		memset( pieces, 0 , sizeof( Pieces_t ) );	
+	}
+	*/
+	pieces[ 0 ]->state = 0;
+}
+
 void RemoveGame( Game_t *g ) 
 {
 	memset( g, 0, sizeof( Game_t ) );
