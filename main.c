@@ -282,6 +282,11 @@ int main( int argc, char **argv )
 	ClientThread_t ct;
 	CrossThread_t cst;
 
+	if( argv[ 1 ] == NULL ) {
+		LogMessage( LOG_ERROR, "port unspecified" );
+		exit(0);
+	}
+
      	sockfd = socket( AF_INET, SOCK_STREAM, 0 );
   	if( sockfd < 0 ) {
 		LogMessage( LOG_ERROR, "opening socket" );
@@ -300,7 +305,7 @@ int main( int argc, char **argv )
 	ct.sockfd = &sockfd;
 	ct.cst = &cst;
 
-     	portno = atoi( argv[1] ); // 5777
+     	portno = atoi( argv[1] ); 
      	serv_addr.sin_family = AF_INET;
      	serv_addr.sin_addr.s_addr = INADDR_ANY;
      	serv_addr.sin_port = htons( portno );
